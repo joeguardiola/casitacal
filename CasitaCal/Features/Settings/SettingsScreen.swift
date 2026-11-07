@@ -38,11 +38,7 @@ struct SettingsScreen: View {
                     Text("Each person owns one Google Calendar event color. To tag an event from your phone, set its color in the Google Calendar app.")
                 }
 
-                Section("Google Calendar") {
-                    LabeledContent("Account", value: "Not connected")
-                    Text("Sign-in arrives in Milestone 2.")
-                        .foregroundStyle(.secondary)
-                }
+                GoogleSettingsSection()
 
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
@@ -135,6 +131,54 @@ struct MemberEditor: View {
                     .disabled(member.name.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
+        }
+    }
+}
+
+struct GoogleSettingsSection: View {
+    @Environment(GoogleAuth.self) private var auth
+    @Environment(EventStore.self) private var store
+    @State private var confirmSignOut = false
+
+    var body: some View {
+        Section {
+            switch auth.state {
+            case let .signedIn(email, _):
+                LabeledContent("Account", value: email)
+                NavigationLink {
+                    Form { Section { CalendarPicker() } footer: {
+                        Text("Only calendars you can edit are listed.")
+                    } }
+                    .navigationTitle("Family calendar")
+                    .task { await store.loadCalendars() }
+                } label: {
+                    LabeledContent("Family calendar", value: store.selectedCalendar?.displayName ?? "Choose…")
+                }
+                if let synced = store.lastSynced {
+                    LabeledContent("Last synced", value: synced.formatted(date: .omitted, time: .standard))
+                }
+                Button("Sign out", role: .destructive) { confirmSignOut = true }
+                    .confirmationDialog("Sign out of Google?", isPresented: $confirmSignOut) {
+                        Button("Sign out", role: .destructive) {
+                            auth.signOut()
+                            store.reset()
+                        }
+                    } message: {
+                        Text("The iPad will stop showing your calendar until you sign in again.")
+                    }
+            default:
+                LabeledContent("Account", value: "Not connected")
+                Button("Sign in with Google", systemImage: "person.crop.circle.badge.checkmark") {
+                    Task { await auth.signIn(); await store.loadCalendars() }
+                }
+            }
+            if let error = auth.lastError ?? store.lastError {
+                Text(error).font(.footnote).foregroundStyle(.red)
+            }
+        } header: {
+            Text("Google Calendar")
+        } footer: {
+            Text("Sign-in is stored securely in the iPad's Keychain.")
         }
     }
 }

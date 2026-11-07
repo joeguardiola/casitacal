@@ -1,88 +1,254 @@
 import SwiftUI
 
-enum CalendarMode: String, CaseIterable, Identifiable {
-    case day, week, month, schedule
-    var id: String { rawValue }
-    var title: String { rawValue.capitalized }
-}
-
-/// Calendar shell. Real Google-backed views arrive in Milestone 2;
-/// for now this shows the week frame so the layout can be judged on the iPad.
 struct CalendarScreen: View {
-    @State private var mode: CalendarMode = .week
+    @Environment(GoogleAuth.self) private var auth
+    @Environment(EventStore.self) private var store
+    @Environment(MemberStore.self) private var memberStore
+    @Environment(\.scenePhase) private var scenePhase
+
+    @AppStorage("calendar.mode") private var mode: CalendarMode = .week
+    @AppStorage("calendar.dayByPerson") private var dayByPerson = true
     @State private var anchor = Date()
+    @State private var selected: CalendarEvent?
+
+    private var range: DateInterval { CalendarRanges.range(for: mode, anchor: anchor) }
+
+    private var visibleEvents: [CalendarEvent] {
+        store.events.filter {
+            EventMapper.isVisible($0, members: memberStore.members, hidden: memberStore.hiddenMemberIDs)
+        }
+    }
+
+    private var visibleMembers: [Member] {
+        memberStore.members.filter(memberStore.isVisible)
+    }
 
     var body: some View {
         VStack(spacing: 16) {
-            HStack {
-                Picker("View", selection: $mode) {
-                    ForEach(CalendarMode.allCases) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                .frame(maxWidth: 420)
-
-                Spacer()
-
-                Button("Today") { anchor = Date() }
-                    .buttonStyle(.bordered)
-                    .controlSize(.large)
-            }
-
-            WeekFrame(anchor: anchor)
+            toolbar
+            content
         }
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
-        .overlay(alignment: .bottomTrailing) {
-            Button {
-                // Add sheet arrives in Milestone 3.
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 30, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 76, height: 76)
-                    .background(Circle().fill(Palette.accent))
-                    .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+        // Reload when the range or calendar changes, then every 60s while visible & active.
+        .task(id: TaskKey(range: range, calendarId: store.selectedCalendarId, active: scenePhase == .active)) {
+            guard scenePhase == .active else { return }
+            await store.keepFresh(range)
+        }
+        .sheet(item: $selected) { e in
+            EventDetailSheet(event: e, style: EventStyle(e, members: memberStore.members))
+        }
+    }
+
+    private struct TaskKey: Equatable {
+        let range: DateInterval
+        let calendarId: String?
+        let active: Bool
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if !auth.isSignedIn || store.selectedCalendarId == nil {
+            GoogleConnectCard()
+                .frame(maxWidth: 560)
+                .frame(maxHeight: .infinity)
+        } else {
+            switch mode {
+            case .day:
+                DayView(day: anchor, events: visibleEvents, members: visibleMembers, byPerson: $dayByPerson) { selected = $0 }
+            case .week:
+                WeekView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members,
+                         onSelect: { selected = $0 }, onOpenDay: openDay)
+            case .month:
+                MonthView(anchor: anchor, days: CalendarRanges.monthGrid(for: anchor), events: visibleEvents,
+                          members: memberStore.members, onOpenDay: openDay)
+            case .schedule:
+                ScheduleView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members) { selected = $0 }
             }
-            .padding(28)
-            .accessibilityLabel("Add")
+        }
+    }
+
+    private func openDay(_ day: Date) {
+        withAnimation(.snappy) {
+            anchor = day
+            mode = .day
+        }
+    }
+
+    private var toolbar: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 4) {
+                navButton("chevron.left", label: "Previous") { anchor = CalendarRanges.step(anchor, mode: mode, by: -1) }
+                navButton("chevron.right", label: "Next") { anchor = CalendarRanges.step(anchor, mode: mode, by: 1) }
+            }
+            Text(title)
+                .font(.title.weight(.bold))
+                .foregroundStyle(Palette.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            Button("Today") { withAnimation(.snappy) { anchor = Date() } }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
+                .disabled(range.contains(Date()) && mode != .day || Calendar.current.isDateInToday(anchor))
+
+            Spacer()
+
+            syncStatus
+
+            if mode == .day {
+                Toggle(isOn: $dayByPerson) {
+                    Label("By person", systemImage: "person.2")
+                }
+                .toggleStyle(.button)
+                .controlSize(.large)
+            }
+
+            Picker("View", selection: $mode.animation(.snappy)) {
+                ForEach(CalendarMode.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 360)
+        }
+    }
+
+    private func navButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
+        Button(action: { withAnimation(.snappy, action) }) {
+            Image(systemName: symbol)
+                .font(.title3.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(Palette.surface))
+                .overlay(Circle().strokeBorder(Palette.hairline))
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Palette.ink)
+        .accessibilityLabel(label)
+    }
+
+    @ViewBuilder
+    private var syncStatus: some View {
+        if let error = store.lastError {
+            Label("Sync problem", systemImage: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.orange)
+                .help(error)
+                .onTapGesture { Task { await store.load(range) } }
+        } else if store.isLoading && store.lastSynced == nil {
+            ProgressView()
+        } else if let synced = store.lastSynced {
+            Text("Updated \(synced, format: .dateTime.hour().minute())")
+                .font(.subheadline)
+                .foregroundStyle(Palette.inkSecondary)
+        }
+    }
+
+    private var title: String {
+        let cal = Calendar.current
+        switch mode {
+        case .day:
+            return anchor.formatted(.dateTime.weekday(.wide).month(.wide).day())
+        case .week:
+            let days = CalendarRanges.days(in: range)
+            guard let first = days.first, let last = days.last else { return "" }
+            if cal.isDate(first, equalTo: last, toGranularity: .month) {
+                return "\(first.formatted(.dateTime.month(.wide).day()))–\(last.formatted(.dateTime.day()))"
+            }
+            return "\(first.formatted(.dateTime.month(.abbreviated).day())) – \(last.formatted(.dateTime.month(.abbreviated).day()))"
+        case .month:
+            return anchor.formatted(.dateTime.month(.wide).year())
+        case .schedule:
+            return "Upcoming"
         }
     }
 }
 
-/// Seven day columns with headers, today highlighted.
-struct WeekFrame: View {
-    let anchor: Date
-    private let calendar = Calendar.current
-
-    private var days: [Date] {
-        let start = calendar.dateInterval(of: .weekOfYear, for: anchor)?.start ?? anchor
-        return (0..<7).compactMap { calendar.date(byAdding: .day, value: $0, to: start) }
-    }
+/// Shown until Google is connected and the family calendar is picked.
+struct GoogleConnectCard: View {
+    @Environment(GoogleAuth.self) private var auth
+    @Environment(EventStore.self) private var store
 
     var body: some View {
-        HStack(spacing: 10) {
-            ForEach(days, id: \.self) { day in
-                let isToday = calendar.isDateInToday(day)
-                VStack(spacing: 10) {
-                    VStack(spacing: 2) {
-                        Text(day, format: .dateTime.weekday(.abbreviated))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isToday ? Palette.accent : Palette.inkSecondary)
-                        Text(day, format: .dateTime.day())
-                            .font(.system(size: 26, weight: .bold, design: .rounded))
-                            .foregroundStyle(isToday ? .white : Palette.ink)
-                            .frame(width: 46, height: 46)
-                            .background(Circle().fill(isToday ? Palette.accent : .clear))
+        Card {
+            VStack(alignment: .leading, spacing: 18) {
+                Image(systemName: "calendar.badge.plus")
+                    .font(.system(size: 44))
+                    .foregroundStyle(Palette.accent)
+                if !auth.isSignedIn {
+                    Text("Connect your family calendar")
+                        .font(.title.weight(.bold))
+                    Text("Sign in with the Google account that has your shared family calendar. Events you add here show up on everyone's phones, and the other way around.")
+                        .foregroundStyle(Palette.inkSecondary)
+                    Button {
+                        Task { await auth.signIn(); await store.loadCalendars() }
+                    } label: {
+                        Label("Sign in with Google", systemImage: "person.crop.circle.badge.checkmark")
+                            .font(.title3.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 6)
                     }
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Palette.surface)
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 18, style: .continuous)
-                                .strokeBorder(isToday ? Palette.accent.opacity(0.5) : Palette.hairline, lineWidth: isToday ? 2 : 1)
-                        )
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                } else {
+                    Text("Which calendar is the family calendar?")
+                        .font(.title.weight(.bold))
+                    CalendarPicker()
+                }
+                if let error = auth.lastError ?? store.lastError {
+                    Text(error).font(.footnote).foregroundStyle(.red)
                 }
             }
         }
+        .task(id: auth.isSignedIn) {
+            if auth.isSignedIn && store.calendars.isEmpty { await store.loadCalendars() }
+        }
+    }
+}
+
+/// List of the account's writable calendars.
+struct CalendarPicker: View {
+    @Environment(EventStore.self) private var store
+
+    var body: some View {
+        @Bindable var store = store
+        let writable = store.calendars.filter(\.canWrite)
+        VStack(spacing: 8) {
+            if writable.isEmpty {
+                ProgressView().frame(maxWidth: .infinity)
+            }
+            ForEach(writable) { cal in
+                Button {
+                    store.selectedCalendarId = cal.id
+                } label: {
+                    HStack(spacing: 12) {
+                        Circle()
+                            .fill(Color(hexString: cal.backgroundColor) ?? Palette.family)
+                            .frame(width: 16, height: 16)
+                        Text(cal.displayName)
+                            .font(.body.weight(.medium))
+                        if cal.primary == true {
+                            Text("Primary").font(.caption).foregroundStyle(Palette.inkSecondary)
+                        }
+                        Spacer()
+                        if store.selectedCalendarId == cal.id {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Palette.accent)
+                        }
+                    }
+                    .padding(12)
+                    .background(Palette.canvas, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+extension Color {
+    /// "#a4bdfc" → Color
+    init?(hexString: String?) {
+        guard var s = hexString else { return nil }
+        if s.hasPrefix("#") { s.removeFirst() }
+        guard s.count == 6, let v = UInt32(s, radix: 16) else { return nil }
+        self.init(hex: v)
     }
 }
