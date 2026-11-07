@@ -37,7 +37,7 @@ struct CalendarScreen: View {
             await store.keepFresh(range)
         }
         .sheet(item: $selected) { e in
-            EventDetailSheet(event: e, style: EventStyle(e, members: memberStore.members))
+            EventDetailSheet(event: e)
         }
     }
 

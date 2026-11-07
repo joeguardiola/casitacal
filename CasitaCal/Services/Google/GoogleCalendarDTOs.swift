@@ -50,3 +50,20 @@ struct GCalEventTime: Codable, Equatable {
     var dateTime: String?
     var timeZone: String?
 }
+
+/// Body for assigning people to an event.
+/// `colorId: nil` is sent as JSON null, which resets the event to the calendar's color.
+struct GCalEventPatch: Encodable {
+    var colorId: String?
+    var sharedProperties: [String: String]
+
+    enum CodingKeys: String, CodingKey { case colorId, extendedProperties }
+    enum ExtendedKeys: String, CodingKey { case shared }
+
+    func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(colorId, forKey: .colorId) // explicit null clears it
+        var ext = c.nestedContainer(keyedBy: ExtendedKeys.self, forKey: .extendedProperties)
+        try ext.encode(sharedProperties, forKey: .shared)
+    }
+}

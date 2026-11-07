@@ -77,6 +77,29 @@ final class EventStore {
         }
     }
 
+    /// Assign people to an event and save it to Google.
+    ///
+    /// One person: just the event color (so a phone can change it later).
+    /// Several people: first person's color + CasitaCal's hidden tag listing everyone.
+    /// Nobody: calendar color, tag cleared.
+    func assign(_ event: CalendarEvent, to people: [Member], allRepeats: Bool) async throws {
+        guard let calendarId = selectedCalendarId else { return }
+        let targetId = allRepeats ? (event.recurringEventId ?? event.id) : event.id
+        let colorId = people.first?.color.googleColorId
+        let tag = people.count > 1 ? people.map(\.id.uuidString).joined(separator: ",") : ""
+        let patch = GCalEventPatch(colorId: colorId, sharedProperties: [CalendarEvent.membersPropertyKey: tag])
+
+        try await client.patchEvent(calendarId: calendarId, eventId: targetId, patch)
+
+        // Show the change right away, then confirm with a fresh load.
+        let tagIDs = people.count > 1 ? people.map(\.id) : []
+        for i in events.indices where events[i].id == event.id || (allRepeats && events[i].recurringEventId == targetId) {
+            events[i].colorId = colorId
+            events[i].taggedMemberIDs = tagIDs
+        }
+        if let loadedRange { await load(loadedRange) }
+    }
+
     func reset() {
         calendars = []
         events = []

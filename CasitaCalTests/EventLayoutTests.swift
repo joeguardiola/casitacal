@@ -125,6 +125,42 @@ struct EventMapperTests {
         #expect(EventMapper.members(for: event(), from: [joe, kid]).isEmpty)
     }
 
+    @Test func nameInTitleMatchesWholeWords() {
+        let e = { (t: String) in CalendarEvent(id: "e", title: t, start: .now, end: .now, isAllDay: false, taggedMemberIDs: []) }
+        #expect(EventMapper.members(for: e("Joe dentist"), from: [joe, kid]) == [joe])
+        #expect(EventMapper.members(for: e("Dentist – JOE's checkup"), from: [joe, kid]) == [joe])
+        #expect(EventMapper.members(for: e("Joey's party"), from: [joe, kid]).isEmpty)
+        #expect(EventMapper.members(for: e("Joe + Kid swim"), from: [joe, kid]) == [joe, kid])
+    }
+
+    @Test func nicknamesAndAccentsMatch() {
+        var dad = joe
+        dad.nicknames = ["Dad", "Papá"]
+        let e = { (t: String) in CalendarEvent(id: "e", title: t, start: .now, end: .now, isAllDay: false, taggedMemberIDs: []) }
+        #expect(EventMapper.members(for: e("Pick up dad"), from: [dad]) == [dad])
+        #expect(EventMapper.members(for: e("Papa's golf"), from: [dad]) == [dad])
+        #expect(EventMapper.members(for: e("Daddy daycare"), from: [dad]).isEmpty)
+    }
+
+    @Test func colorBeatsTitleAndSourceIsReported() {
+        let e = CalendarEvent(id: "e", title: "Kid soccer", start: .now, end: .now, isAllDay: false, colorId: "7", taggedMemberIDs: [])
+        let a = EventMapper.assignment(for: e, from: [joe, kid])
+        #expect(a.members == [joe])
+        #expect(a.source == .color)
+    }
+
+    @Test func patchEncodesNullColorToClear() throws {
+        let json = String(data: try JSONEncoder().encode(GCalEventPatch(colorId: nil, sharedProperties: ["k": ""])), encoding: .utf8)!
+        #expect(json.contains("\"colorId\":null"))
+        #expect(json.contains("\"shared\":{\"k\":\"\"}"))
+    }
+
+    @Test func oldSavedMembersStillDecode() throws {
+        let old = #"[{"id":"\#(UUID().uuidString)","name":"Joe","emoji":"🧔","color":"7","role":"adult"}]"#
+        let decoded = try JSONDecoder().decode([Member].self, from: Data(old.utf8))
+        #expect(decoded.first?.nicknames == [])
+    }
+
     @Test func visibilityFollowsFilter() {
         let e = event(colorId: "7")
         #expect(EventMapper.isVisible(e, members: [joe, kid], hidden: []))

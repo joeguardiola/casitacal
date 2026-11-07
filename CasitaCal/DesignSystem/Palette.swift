@@ -22,7 +22,7 @@ enum Palette {
     static let hairline = Color(light: 0xE8DFD4, dark: 0x3A352E)
     static let accent = Color(hex: 0xE87A61)
     /// Events not tagged to anyone ("Everyone").
-    static let family = Color(hex: 0xC9874E)
+    static let family = Color(light: 0x9C8F84, dark: 0xB3A79B)
 }
 
 extension MemberColor {

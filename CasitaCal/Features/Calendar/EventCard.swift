@@ -132,12 +132,27 @@ struct TimeBlock: View {
     }
 }
 
-/// Read-only details (editing arrives in Milestone 3).
+/// Event details, with "who's this for?" assignment that saves back to Google.
 struct EventDetailSheet: View {
     let event: CalendarEvent
-    let style: EventStyle
+    @Environment(MemberStore.self) private var memberStore
+    @Environment(EventStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openURL) private var openURL
+
+    @State private var chosen: [Member.ID] = []
+    @State private var isSaving = false
+    @State private var askScope = false
+    @State private var error: String?
+
+    private var assignment: EventMapper.Assignment {
+        EventMapper.assignment(for: event, from: memberStore.members)
+    }
+    private var original: [Member.ID] { assignment.members.map(\.id) }
+    private var hasChanges: Bool { Set(chosen) != Set(original) }
+    private var chosenMembers: [Member] {
+        chosen.compactMap { id in memberStore.members.first { $0.id == id } }
+    }
 
     var body: some View {
         NavigationStack {
@@ -152,16 +167,17 @@ struct EventDetailSheet: View {
                     }
                     .padding(.vertical, 6)
                 }
-                Section("Who") {
-                    if style.members.isEmpty {
-                        Label("Everyone", systemImage: "person.3.fill")
+                Section {
+                    whoPicker
+                } header: {
+                    Text("Who's this for?")
+                } footer: {
+                    if hasChanges {
+                        Text("Saving sets the event color in Google, so phones show it too.")
+                    } else if let why = assignment.source.explanation {
+                        Text(why)
                     } else {
-                        ForEach(style.members) { m in
-                            HStack(spacing: 12) {
-                                ProfileAvatar(member: m, size: 34)
-                                Text(m.name)
-                            }
-                        }
+                        Text("Nobody picked, so it shows for everyone.")
                     }
                 }
                 if let location = event.location, !location.isEmpty {
@@ -178,10 +194,89 @@ struct EventDetailSheet: View {
                         Button("Open in Google Calendar", systemImage: "arrow.up.right.square") { openURL(url) }
                     }
                 }
+                if let error {
+                    Section { Text(error).foregroundStyle(.red) }
+                }
             }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(hasChanges ? "Cancel" : "Done") { dismiss() }
+                }
+                if hasChanges {
+                    ToolbarItem(placement: .confirmationAction) {
+                        if isSaving {
+                            ProgressView()
+                        } else {
+                            Button("Save") {
+                                if event.isRecurring { askScope = true } else { save(allRepeats: false) }
+                            }
+                            .fontWeight(.semibold)
+                        }
+                    }
+                }
+            }
+            .confirmationDialog("This is a repeating event", isPresented: $askScope, titleVisibility: .visible) {
+                Button("Only this event") { save(allRepeats: false) }
+                Button("All repeats") { save(allRepeats: true) }
+            }
+            .onAppear { chosen = original }
+            .interactiveDismissDisabled(hasChanges)
+        }
+    }
+
+    private var whoPicker: some View {
+        LazyVGrid(columns: [GridItem(.adaptive(minimum: 92), spacing: 12)], spacing: 14) {
+            Button {
+                chosen = []
+            } label: {
+                VStack(spacing: 6) {
+                    Image(systemName: "person.3.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(Palette.family)
+                        .frame(width: 60, height: 60)
+                        .background(Circle().fill(Palette.family.opacity(0.17)))
+                        .overlay(Circle().strokeBorder(Palette.family, lineWidth: chosen.isEmpty ? 4 : 0))
+                    Text("Everyone").font(.subheadline.weight(.semibold))
+                }
+            }
+            .buttonStyle(.plain)
+
+            ForEach(memberStore.members) { m in
+                let on = chosen.contains(m.id)
+                Button {
+                    if on { chosen.removeAll { $0 == m.id } } else { chosen.append(m.id) }
+                } label: {
+                    VStack(spacing: 6) {
+                        ProfileAvatar(member: m, size: 60, isActive: on || chosen.isEmpty)
+                            .overlay(alignment: .bottomTrailing) {
+                                if on {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.title3)
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, m.color.strong)
+                                }
+                            }
+                        Text(m.name).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+        .padding(.vertical, 8)
+    }
+
+    private func save(allRepeats: Bool) {
+        isSaving = true
+        error = nil
+        Task {
+            defer { isSaving = false }
+            do {
+                try await store.assign(event, to: chosenMembers, allRepeats: allRepeats)
+                dismiss()
+            } catch {
+                self.error = "Couldn't save to Google: \(error.localizedDescription)"
             }
         }
     }

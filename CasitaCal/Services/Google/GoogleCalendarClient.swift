@@ -57,15 +57,34 @@ struct GoogleCalendarClient {
         return all.filter { $0.status != "cancelled" }
     }
 
+    /// Partial update of one event (or a whole series, when given the series id).
+    @discardableResult
+    func patchEvent(calendarId: String, eventId: String, _ patch: GCalEventPatch) async throws -> GCalEvent {
+        try await send(
+            "PATCH",
+            path: "calendars/\(Self.encode(calendarId))/events/\(Self.encode(eventId))",
+            body: try JSONEncoder().encode(patch)
+        )
+    }
+
     // MARK: - Plumbing
 
     private func get<T: Decodable>(path: String, query: [URLQueryItem]) async throws -> T {
+        try await send("GET", path: path, query: query)
+    }
+
+    private func send<T: Decodable>(_ method: String, path: String, query: [URLQueryItem] = [], body: Data? = nil) async throws -> T {
         // `path` is already percent-encoded (see `encode`), so join strings rather than
         // using appendingPathComponent, which would double-encode it.
         var components = URLComponents(string: Self.base.absoluteString + "/" + path)!
-        components.queryItems = query
+        if !query.isEmpty { components.queryItems = query }
         var request = URLRequest(url: components.url!)
+        request.httpMethod = method
         request.setValue("Bearer \(try await tokenProvider())", forHTTPHeaderField: "Authorization")
+        if let body {
+            request.httpBody = body
+            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        }
         let (data, response) = try await session.data(for: request)
         let status = (response as? HTTPURLResponse)?.statusCode ?? 0
         guard (200..<300).contains(status) else {

@@ -65,6 +65,14 @@ struct MemberEditor: View {
     @State var member: Member
     let isNew: Bool
 
+    @State private var nicknamesDraft: String?
+    private var nicknamesText: Binding<String> {
+        Binding(
+            get: { nicknamesDraft ?? member.nicknames.joined(separator: ", ") },
+            set: { nicknamesDraft = $0 }
+        )
+    }
+
     private let emojiChoices = ["🧔", "👩", "👨", "👱‍♀️", "🧒", "👧", "👦", "👶", "🐶", "🐱", "🙂", "⭐️"]
 
     var body: some View {
@@ -85,6 +93,15 @@ struct MemberEditor: View {
                         ForEach(Member.Role.allCases, id: \.self) { Text($0.label).tag($0) }
                     }
                     .pickerStyle(.segmented)
+                }
+                Section {
+                    TextField("e.g. Dad, Papa", text: nicknamesText)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                } header: {
+                    Text("Also called")
+                } footer: {
+                    Text("Events with \(member.name.isEmpty ? "their name" : "“\(member.name)”") or any of these words in the title show up as theirs. Separate with commas.")
                 }
                 Section("Avatar") {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 12) {
@@ -125,6 +142,12 @@ struct MemberEditor: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         member.name = member.name.trimmingCharacters(in: .whitespaces)
+                        if let nicknamesDraft {
+                            member.nicknames = nicknamesDraft
+                                .split(separator: ",")
+                                .map { $0.trimmingCharacters(in: .whitespaces) }
+                                .filter { !$0.isEmpty }
+                        }
                         members.upsert(member)
                         dismiss()
                     }

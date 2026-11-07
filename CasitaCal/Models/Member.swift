@@ -8,6 +8,8 @@ struct Member: Identifiable, Codable, Hashable, Sendable {
     var emoji: String
     var color: MemberColor
     var role: Role = .adult
+    /// Extra words that mean this person in an event title ("Dad", "Mommy"). Their name always counts.
+    var nicknames: [String] = []
 
     enum Role: String, Codable, CaseIterable, Sendable {
         case adult, kid
@@ -15,6 +17,33 @@ struct Member: Identifiable, Codable, Hashable, Sendable {
     }
 
     var initial: String { name.first.map { String($0).uppercased() } ?? "?" }
+
+    /// Name + nicknames, trimmed, without blanks.
+    var titleKeywords: [String] {
+        ([name] + nicknames)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
+
+    init(id: UUID = UUID(), name: String, emoji: String, color: MemberColor, role: Role = .adult, nicknames: [String] = []) {
+        self.id = id
+        self.name = name
+        self.emoji = emoji
+        self.color = color
+        self.role = role
+        self.nicknames = nicknames
+    }
+
+    // Tolerates data saved before newer fields existed.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        emoji = try c.decode(String.self, forKey: .emoji)
+        color = try c.decode(MemberColor.self, forKey: .color)
+        role = try c.decodeIfPresent(Role.self, forKey: .role) ?? .adult
+        nicknames = try c.decodeIfPresent([String].self, forKey: .nicknames) ?? []
+    }
 }
 
 /// The 11 Google Calendar event colors. `rawValue` is Google's `colorId`.
