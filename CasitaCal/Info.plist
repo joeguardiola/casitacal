@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CASITACAL_HAS_ICLOUD</key>
+	<string>$(CASITACAL_HAS_ICLOUD)</string>
 	<key>CASITACAL_HAS_WEATHERKIT</key>
 	<string>$(CASITACAL_HAS_WEATHERKIT)</string>
 	<key>CFBundleDevelopmentRegion</key>
@@ -35,5 +37,9 @@
 	<string>CasitaCal uses the iPad's location to show local weather on the kitchen display.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>CasitaCal shows photos from the album you choose as a slideshow when the kitchen display is idle.</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 </dict>
 </plist>

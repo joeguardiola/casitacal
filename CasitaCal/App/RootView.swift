@@ -23,7 +23,8 @@ enum AppSection: String, CaseIterable, Identifiable {
 /// iPhone: standard tab bar (companion for chores/lists/meals).
 struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var section: AppSection = .calendar
+    // `-startSection chores` (launch argument) opens a tab directly — handy for screenshots.
+    @State private var section: AppSection = UserDefaults.standard.string(forKey: "startSection").flatMap(AppSection.init) ?? .calendar
 
     var body: some View {
         if sizeClass == .compact {
@@ -58,9 +59,9 @@ struct SectionContent: View {
     var body: some View {
         switch section {
         case .calendar: CalendarScreen()
-        case .chores: ComingSoonView(title: "Chores", systemImage: section.systemImage, milestone: "Milestone 5")
-        case .lists: ComingSoonView(title: "Lists", systemImage: section.systemImage, milestone: "Milestone 5")
-        case .meals: ComingSoonView(title: "Meals", systemImage: section.systemImage, milestone: "Milestone 5")
+        case .chores: ChoresScreen()
+        case .lists: ListsScreen()
+        case .meals: MealsScreen()
         case .photos: PhotosScreen()
         case .settings: SettingsScreen()
         }

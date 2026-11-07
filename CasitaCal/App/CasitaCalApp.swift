@@ -2,7 +2,10 @@ import SwiftUI
 
 @main
 struct CasitaCalApp: App {
-    @State private var members = MemberStore()
+    private let persistence: Persistence
+    @State private var household: HouseholdData
+    @State private var members: MemberStore
+    @State private var chores: ChoreStore
     @State private var auth: GoogleAuth
     @State private var events: EventStore
     @State private var weather = WeatherStore()
@@ -10,6 +13,12 @@ struct CasitaCalApp: App {
     @State private var kiosk = KioskController()
 
     init() {
+        let persistence = Persistence()
+        persistence.seedListsIfNeeded()
+        self.persistence = persistence
+        _household = State(initialValue: HouseholdData(persistence))
+        _members = State(initialValue: MemberStore(persistence: persistence))
+        _chores = State(initialValue: ChoreStore(persistence: persistence))
         let auth = GoogleAuth()
         _auth = State(initialValue: auth)
         _events = State(initialValue: EventStore(auth: auth))
@@ -18,6 +27,9 @@ struct CasitaCalApp: App {
     var body: some Scene {
         WindowGroup {
             RootView()
+                .environment(\.managedObjectContext, persistence.context)
+                .environment(household)
+                .environment(chores)
                 .environment(members)
                 .environment(auth)
                 .environment(events)

@@ -5,6 +5,7 @@ import SwiftUI
 /// Tap avatars to choose who an event is for. Empty selection = everyone.
 struct PeoplePicker: View {
     @Binding var chosen: [Member.ID]
+    var everyoneLabel = "Everyone"
     @Environment(MemberStore.self) private var memberStore
     var avatarSize: CGFloat = 60
 
@@ -18,7 +19,7 @@ struct PeoplePicker: View {
                         .frame(width: avatarSize, height: avatarSize)
                         .background(Circle().fill(Palette.family.opacity(0.17)))
                         .overlay(Circle().strokeBorder(Palette.family, lineWidth: chosen.isEmpty ? 4 : 0))
-                    Text("Everyone").font(.subheadline.weight(.semibold))
+                    Text(everyoneLabel).font(.subheadline.weight(.semibold))
                 }
             }
             .buttonStyle(.plain)

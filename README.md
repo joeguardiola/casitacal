@@ -42,6 +42,25 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - **Edit and delete,** with *only this event* / *all repeats* for repeating events.
 - **Offline cache:** the calendar shows instantly on launch and stays visible if Wi-Fi drops.
 
+### Chores
+- **A chore chart with a column per person.** Each chore is a big card: tap it to check it off, and a ring shows progress for the day.
+- Chores can repeat:
+  - once (missed one-off chores carry over to today until done)
+  - every day, weekdays or weekends
+  - weekly
+  - on days you pick
+- Set a **time of day** (morning, afternoon or evening) and **stars**. Kids earn ⭐️ per chore, with weekly totals under each name.
+- **"Anyone" chores** get their own column, so whoever does it checks it off.
+
+### Lists
+- **Shared lists** for groceries, to-dos, packing or anything else. Groceries and To-do come built in.
+- Quick add keeps the keyboard up so you can rattle off a whole grocery run.
+- Tap to check off. Completed items drop to the bottom, and **Clear** removes them.
+
+### Meals
+- **A weekly meal plan** with days across and breakfast, lunch, dinner and snacks down. Show only the meals you plan.
+- Tap a slot to fill it in. **Recent** suggestions make repeat meals ("Taco Tuesday") one tap.
+
 ### Family
 - **Profiles:** each person gets a name, an emoji avatar and a color. Colors match Google Calendar's 11 event colors.
 - **Automatic "who's it for":** CasitaCal works out each event's people from its color or the names in its title. Details are under [Who's it for?](#whos-it-for).
@@ -149,6 +168,24 @@ Or just put their name in the title: *"Emma piano"*.
 3. In CasitaCal, go to **Photos → Allow photo access → Full Access**, then **Choose album**.
 4. Tap **Start slideshow** to preview it. It also starts by itself when the iPad sits idle (set the delay in **Settings → Kitchen display**). Tap anywhere to return to the calendar.
 
+### Chores, lists and meals how-to
+- **Add a chore:**
+  1. Go to **Chores → +**.
+  2. Pick an emoji, type a name ("Make bed"), and pick who does it. "Anyone" is for shared jobs.
+  3. Choose how often, the time of day and the stars.
+- **Edit or delete a chore:** long-press its card.
+- **Look at other days:** use **‹ ›** at the top of Chores.
+- **Lists:**
+  - Pick a list on the left and type in **Add an item**, pressing return after each one.
+  - Swipe an item left to delete it.
+  - Tap **⋯** to rename or delete the list.
+  - Tap **New list** for more lists.
+- **Meals:**
+  - Tap any square to plan that meal. Pick from **Recent** to reuse one.
+  - Use **Meals shown** to hide breakfast or lunch, or show snacks.
+
+> Chores, lists and meals are stored on the iPad for now. Once the paid Apple team is set up, they sync through iCloud, and a later milestone shares them with a second Apple ID.
+
 ### Settings
 - **Family:**
   - Add, edit or remove people.
@@ -250,6 +287,7 @@ WeatherKit only works for apps signed by a paid team. Free-team builds show `--�
    DEVELOPMENT_TEAM = <paid team ID>
    CASITACAL_ENTITLEMENTS = CasitaCal/CasitaCal.entitlements
    CASITACAL_HAS_WEATHERKIT = YES
+   CASITACAL_HAS_ICLOUD = YES      # turns on iCloud sync for chores, lists, meals and family
    ```
 3. Rebuild and install. Tap the weather in the header, then **Allow location**.
 
@@ -273,7 +311,9 @@ Config/
 CasitaCal/
   App/                       app entry, root layout (iPad rail / iPhone tabs)
   DesignSystem/              palette, avatars, cards
-  Models/                    Member, CalendarEvent, EventDraft, AppCalendar (week start)
+  Models/                    Member and MemberStore, CalendarEvent, EventDraft, AppCalendar (week start)
+  Services/Persistence/      Core Data household store (schema in code, CloudKit-ready)
+  Features/Chores|Lists|Meals/  chore chart and editor, shared lists, weekly meal plan
   Services/Google/           sign-in, Calendar REST client, DTOs, EventMapper (who's it for)
   Features/Calendar/         EventStore (sync and cache), layout math, Day/Week/Month/Schedule, sheets
   Features/Header/           clock, weather badge and forecast, avatar filter bar
@@ -338,8 +378,8 @@ This repo is **public**. Never commit credentials or personal IDs.
 | 2. Google sign-in, Day/Week/Month/Schedule views, "who's it for" | ✅ Done |
 | 3. Add, edit and delete events, quick add, repeats, offline cache | ✅ Done |
 | 4. Kiosk: weather (WeatherKit), night mode, idle photo slideshow (iCloud Shared Album) | ✅ Done (weather needs the paid team) |
-| 5. Chores, lists and meals synced via iCloud (CloudKit) | ⏳ Next |
-| 6. Sharing chores and lists across Apple IDs, iPhone companion layout, TestFlight | Planned |
+| 5. Chores, lists and meals (stored on the iPad; iCloud sync switches on with the paid team) | ✅ Done |
+| 6. iCloud sync and sharing across Apple IDs, iPhone companion layout, TestFlight | ⏳ Next (needs the paid team) |
 
 ---
 

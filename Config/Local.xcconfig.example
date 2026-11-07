@@ -5,3 +5,4 @@ GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.1234567890-abc
 // Uncomment once on a paid Apple Developer team (enables WeatherKit):
 // CASITACAL_ENTITLEMENTS = CasitaCal/CasitaCal.entitlements
 // CASITACAL_HAS_WEATHERKIT = YES
+// CASITACAL_HAS_ICLOUD = YES

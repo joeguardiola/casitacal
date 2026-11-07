@@ -1,52 +1,73 @@
+import CoreData
 import Foundation
 import Observation
 
-/// Local (on-device) member storage for Milestone 1.
-/// Milestone 5 moves members into the shared iCloud household.
+/// Family members, stored in the household database (syncs via iCloud once enabled).
+/// Which members are hidden in the avatar filter is per-device and stays local.
 @MainActor
 @Observable
 final class MemberStore {
     private(set) var members: [Member] = []
-    /// Members whose items are currently shown (the avatar filter row). Empty = everyone.
+    /// Members whose items are hidden by the avatar filter row (this device only).
     var hiddenMemberIDs: Set<Member.ID> = []
 
+    private let persistence: Persistence
     private let defaults: UserDefaults
-    private let key = "casitacal.members.v1"
+    @ObservationIgnored private var observer: NSObjectProtocol?
+    /// Where Milestone 1–4 builds kept members.
+    static let legacyKey = "casitacal.members.v1"
 
-    init(defaults: UserDefaults = .standard) {
+    init(persistence: Persistence, defaults: UserDefaults = .standard) {
+        self.persistence = persistence
         self.defaults = defaults
-        load()
+        migrateOrSeedIfNeeded()
+        reload()
+        // Pick up edits from other devices (CloudKit merges into the view context).
+        observer = NotificationCenter.default.addObserver(
+            forName: .NSManagedObjectContextObjectsDidChange, object: persistence.context, queue: .main
+        ) { [weak self] note in
+            let touchesMembers = [NSInsertedObjectsKey, NSUpdatedObjectsKey, NSDeletedObjectsKey, NSRefreshedObjectsKey]
+                .contains { ((note.userInfo?[$0] as? Set<NSManagedObject>) ?? []).contains { $0 is CDMember } }
+            guard touchesMembers else { return }
+            MainActor.assumeIsolated { self?.reload() }
+        }
     }
 
     func isVisible(_ member: Member) -> Bool { !hiddenMemberIDs.contains(member.id) }
 
     func toggleVisibility(_ member: Member) {
-        if hiddenMemberIDs.contains(member.id) {
-            hiddenMemberIDs.remove(member.id)
-        } else {
-            hiddenMemberIDs.insert(member.id)
-        }
+        if hiddenMemberIDs.contains(member.id) { hiddenMemberIDs.remove(member.id) } else { hiddenMemberIDs.insert(member.id) }
     }
 
     func upsert(_ member: Member) {
-        if let i = members.firstIndex(where: { $0.id == member.id }) {
-            members[i] = member
-        } else {
-            members.append(member)
-        }
-        save()
+        let row = fetch(member.id) ?? {
+            let r = CDMember(context: persistence.context)
+            r.id = member.id
+            r.sortOrder = Int16(members.count)
+            r.household = persistence.household()
+            return r
+        }()
+        apply(member, to: row)
+        persistence.save()
+        reload()
     }
 
     func delete(_ member: Member) {
-        members.removeAll { $0.id == member.id }
+        if let row = fetch(member.id) { persistence.context.delete(row) }
         hiddenMemberIDs.remove(member.id)
-        save()
+        persistence.save()
+        reload()
     }
 
     func move(fromOffsets: IndexSet, toOffset: Int) {
-        members.move(fromOffsets: fromOffsets, toOffset: toOffset)
-        save()
+        var reordered = members
+        reordered.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        for (i, m) in reordered.enumerated() { fetch(m.id)?.sortOrder = Int16(i) }
+        persistence.save()
+        reload()
     }
+
+    func member(id: Member.ID) -> Member? { members.first { $0.id == id } }
 
     /// The member who owns a Google event color, if any.
     func member(forGoogleColorId colorId: String?) -> Member? {
@@ -60,20 +81,58 @@ final class MemberStore {
         return MemberColor.allCases.filter { !taken.contains($0) }
     }
 
-    private func load() {
-        if let data = defaults.data(forKey: key),
-           let decoded = try? JSONDecoder().decode([Member].self, from: data) {
-            members = decoded
-        } else {
-            members = Self.starterFamily
-            save()
-        }
+    // MARK: - Storage
+
+    private func reload() {
+        let request = NSFetchRequest<CDMember>(entityName: "CDMember")
+        request.sortDescriptors = [NSSortDescriptor(key: "sortOrder", ascending: true),
+                                   NSSortDescriptor(key: "name", ascending: true)]
+        let rows = (try? persistence.context.fetch(request)) ?? []
+        // CloudKit can briefly deliver duplicates of the same member; show each id once.
+        var seen = Set<UUID>()
+        members = rows.compactMap(Self.member(from:)).filter { seen.insert($0.id).inserted }
     }
 
-    private func save() {
-        if let data = try? JSONEncoder().encode(members) {
-            defaults.set(data, forKey: key)
+    private func fetch(_ id: UUID) -> CDMember? {
+        let request = NSFetchRequest<CDMember>(entityName: "CDMember")
+        request.predicate = NSPredicate(format: "id == %@", id as CVarArg)
+        request.fetchLimit = 1
+        return try? persistence.context.fetch(request).first
+    }
+
+    private func apply(_ m: Member, to row: CDMember) {
+        row.name = m.name
+        row.emoji = m.emoji
+        row.colorId = m.color.googleColorId
+        row.role = m.role.rawValue
+        row.nicknames = m.nicknames.joined(separator: ",")
+    }
+
+    private static func member(from row: CDMember) -> Member? {
+        guard let id = row.id, let name = row.name, let color = MemberColor(googleColorId: row.colorId) else { return nil }
+        return Member(
+            id: id, name: name, emoji: row.emoji ?? "", color: color,
+            role: Member.Role(rawValue: row.role ?? "") ?? .adult,
+            nicknames: (row.nicknames ?? "").split(separator: ",").map(String.init).filter { !$0.isEmpty }
+        )
+    }
+
+    /// First run on the new database: bring over members from older builds (same IDs,
+    /// so Google events tagged with them still match), or start with a placeholder family.
+    private func migrateOrSeedIfNeeded() {
+        let request = NSFetchRequest<CDMember>(entityName: "CDMember")
+        guard (try? persistence.context.count(for: request)) == 0 else { return }
+        let legacy = defaults.data(forKey: Self.legacyKey).flatMap { try? JSONDecoder().decode([Member].self, from: $0) }
+        let household = persistence.household()
+        for (i, m) in (legacy ?? Self.starterFamily).enumerated() {
+            let row = CDMember(context: persistence.context)
+            row.id = m.id
+            row.sortOrder = Int16(i)
+            row.household = household
+            apply(m, to: row)
         }
+        persistence.save()
+        if legacy != nil { defaults.removeObject(forKey: Self.legacyKey) }
     }
 
     /// Placeholder family so the dashboard isn't empty on first launch. Edit in Settings.

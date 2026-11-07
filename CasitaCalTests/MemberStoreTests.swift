@@ -11,41 +11,61 @@ struct MemberStoreTests {
         return d
     }
 
-    @Test func seedsStarterFamilyOnFirstLaunch() {
-        let store = MemberStore(defaults: freshDefaults())
-        #expect(store.members.count == MemberStore.starterFamily.count)
+    private func store(_ p: Persistence = Persistence(inMemory: true), defaults: UserDefaults? = nil) -> MemberStore {
+        MemberStore(persistence: p, defaults: defaults ?? freshDefaults())
     }
 
-    @Test func persistsAcrossInstances() {
+    @Test func seedsStarterFamilyOnFirstLaunch() {
+        #expect(store().members.count == MemberStore.starterFamily.count)
+    }
+
+    @Test func persistsInDatabase() {
+        let p = Persistence(inMemory: true)
+        let s = store(p)
+        s.upsert(Member(name: "Grandma", emoji: "👵", color: .banana, nicknames: ["Nana"]))
+        let reloaded = store(p)
+        #expect(reloaded.members.contains { $0.name == "Grandma" && $0.color == .banana && $0.nicknames == ["Nana"] })
+    }
+
+    @Test func migratesLegacyMembersKeepingIDs() throws {
         let d = freshDefaults()
-        let store = MemberStore(defaults: d)
-        store.upsert(Member(name: "Grandma", emoji: "👵", color: .banana))
-        let reloaded = MemberStore(defaults: d)
-        #expect(reloaded.members.contains { $0.name == "Grandma" && $0.color == .banana })
+        let legacy = [Member(name: "Emma", emoji: "👧", color: .sage, role: .kid)]
+        d.set(try JSONEncoder().encode(legacy), forKey: MemberStore.legacyKey)
+        let s = store(defaults: d)
+        #expect(s.members.map(\.id) == legacy.map(\.id))
+        #expect(d.data(forKey: MemberStore.legacyKey) == nil)
+    }
+
+    @Test func reorderAndDelete() {
+        let s = store()
+        let first = s.members[0]
+        s.move(fromOffsets: [0], toOffset: s.members.count)
+        #expect(s.members.last?.id == first.id)
+        s.delete(first)
+        #expect(!s.members.contains { $0.id == first.id })
     }
 
     @Test func mapsGoogleColorIdToMember() {
-        let store = MemberStore(defaults: freshDefaults())
-        let joe = store.members.first { $0.name == "Joe" }!
-        #expect(store.member(forGoogleColorId: joe.color.googleColorId)?.id == joe.id)
-        #expect(store.member(forGoogleColorId: nil) == nil)
-        #expect(store.member(forGoogleColorId: "99") == nil)
+        let s = store()
+        let joe = s.members.first { $0.name == "Joe" }!
+        #expect(s.member(forGoogleColorId: joe.color.googleColorId)?.id == joe.id)
+        #expect(s.member(forGoogleColorId: nil) == nil)
+        #expect(s.member(forGoogleColorId: "99") == nil)
     }
 
     @Test func colorsAreUniquePerMember() {
-        let store = MemberStore(defaults: freshDefaults())
-        let available = store.availableColors(for: nil)
-        for m in store.members { #expect(!available.contains(m.color)) }
-        let joe = store.members[0]
-        #expect(store.availableColors(for: joe).contains(joe.color))
+        let s = store()
+        let available = s.availableColors(for: nil)
+        for m in s.members { #expect(!available.contains(m.color)) }
+        #expect(s.availableColors(for: s.members[0]).contains(s.members[0].color))
     }
 
     @Test func toggleVisibility() {
-        let store = MemberStore(defaults: freshDefaults())
-        let m = store.members[0]
-        store.toggleVisibility(m)
-        #expect(!store.isVisible(m))
-        store.toggleVisibility(m)
-        #expect(store.isVisible(m))
+        let s = store()
+        let m = s.members[0]
+        s.toggleVisibility(m)
+        #expect(!s.isVisible(m))
+        s.toggleVisibility(m)
+        #expect(s.isVisible(m))
     }
 }
