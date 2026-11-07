@@ -6,4 +6,12 @@ DEVELOPMENT_TEAM =
 GOOGLE_CLIENT_ID =
 GOOGLE_REVERSED_CLIENT_ID =
 
+// Capabilities that need a paid Apple Developer team (WeatherKit, later iCloud).
+// Empty = free Personal Team builds still sign. Set in Local.xcconfig once enrolled:
+//   CASITACAL_ENTITLEMENTS = CasitaCal/CasitaCal.entitlements
+//   CASITACAL_HAS_WEATHERKIT = YES
+CASITACAL_ENTITLEMENTS =
+CASITACAL_HAS_WEATHERKIT = NO
+CODE_SIGN_ENTITLEMENTS = $(CASITACAL_ENTITLEMENTS)
+
 #include? "Local.xcconfig"

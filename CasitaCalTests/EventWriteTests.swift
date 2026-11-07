@@ -90,3 +90,42 @@ struct EventWriteTests {
         #expect(RepeatRule.biweekly.rrule == "RRULE:FREQ=WEEKLY;INTERVAL=2")
     }
 }
+
+struct KioskTests {
+    var cal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "America/Los_Angeles")!
+        return c
+    }()
+    func at(_ h: Int, _ m: Int = 0) -> Date { cal.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: h, minute: m))! }
+    let night = (DateComponents(hour: 22, minute: 0), DateComponents(hour: 6, minute: 30))
+
+    func mode(idle: TimeInterval, at date: Date, slideshow: Int = 10, sleep: Bool = true, current: KioskController.Mode = .active) -> KioskController.Mode {
+        KioskController.mode(idle: idle, now: date, slideshowAfterMinutes: slideshow, sleepEnabled: sleep,
+                             sleepStart: night.0, sleepEnd: night.1, current: current, calendar: cal)
+    }
+
+    @Test func overnightWindowCrossesMidnight() {
+        #expect(KioskController.isWithin(at(23), start: night.0, end: night.1, calendar: cal))
+        #expect(KioskController.isWithin(at(3), start: night.0, end: night.1, calendar: cal))
+        #expect(!KioskController.isWithin(at(6, 30), start: night.0, end: night.1, calendar: cal))
+        #expect(!KioskController.isWithin(at(12), start: night.0, end: night.1, calendar: cal))
+    }
+
+    @Test func daytimeIdleStartsSlideshow() {
+        #expect(mode(idle: 60, at: at(14)) == .active)
+        #expect(mode(idle: 10 * 60, at: at(14)) == .slideshow)
+        #expect(mode(idle: 3600, at: at(14), slideshow: 0) == .active) // slideshow off
+    }
+
+    @Test func nightSleepsAfterShortIdleEvenFromSlideshow() {
+        #expect(mode(idle: 30, at: at(23)) == .active)          // just touched: stay awake
+        #expect(mode(idle: 3 * 60, at: at(23)) == .sleep)
+        #expect(mode(idle: 3 * 60, at: at(23), current: .slideshow) == .sleep)
+        #expect(mode(idle: 3 * 60, at: at(23), sleep: false) == .active)
+    }
+
+    @Test func manualSlideshowPersistsUntilTouched() {
+        #expect(mode(idle: 5, at: at(14), current: .slideshow) == .slideshow)
+    }
+}

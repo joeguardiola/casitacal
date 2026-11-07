@@ -47,6 +47,7 @@ struct RootView: View {
                 }
             }
             .background(Palette.canvas)
+            .overlay { KioskOverlay() }
         }
     }
 }
@@ -60,7 +61,7 @@ struct SectionContent: View {
         case .chores: ComingSoonView(title: "Chores", systemImage: section.systemImage, milestone: "Milestone 5")
         case .lists: ComingSoonView(title: "Lists", systemImage: section.systemImage, milestone: "Milestone 5")
         case .meals: ComingSoonView(title: "Meals", systemImage: section.systemImage, milestone: "Milestone 5")
-        case .photos: ComingSoonView(title: "Photos", systemImage: section.systemImage, milestone: "Milestone 4")
+        case .photos: PhotosScreen()
         case .settings: SettingsScreen()
         }
     }
@@ -72,9 +73,14 @@ struct SideRail: View {
 
     var body: some View {
         VStack(spacing: 10) {
-            Text("🏡")
-                .font(.system(size: 34))
-                .padding(.vertical, 18)
+            Image("Logo")
+                .resizable()
+                .interpolation(.high)
+                .frame(width: 60, height: 60)
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+                .shadow(color: .black.opacity(0.12), radius: 4, y: 2)
+                .padding(.vertical, 16)
+                .accessibilityLabel("CasitaCal")
             ForEach(AppSection.allCases.filter { $0 != .settings }) { s in
                 railButton(s)
             }

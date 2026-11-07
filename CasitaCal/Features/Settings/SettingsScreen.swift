@@ -42,6 +42,8 @@ struct SettingsScreen: View {
 
                 CalendarPrefsSection()
 
+                KitchenDisplaySection()
+
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
                 }
@@ -218,5 +220,54 @@ struct CalendarPrefsSection: View {
                 Text("Sunday").tag(false)
             }
         }
+    }
+}
+
+struct KitchenDisplaySection: View {
+    @Environment(KioskController.self) private var kiosk
+    @Environment(PhotoLibrary.self) private var photos
+    @Environment(WeatherStore.self) private var weather
+
+    var body: some View {
+        @Bindable var kiosk = kiosk
+        Section {
+            Picker("Photo slideshow when idle", selection: $kiosk.slideshowAfterMinutes) {
+                Text("Off").tag(0)
+                ForEach([2, 5, 10, 15, 30], id: \.self) { Text("After \($0) min").tag($0) }
+            }
+            LabeledContent("Slideshow album", value: photos.selectedAlbum?.title ?? "Choose in Photos")
+            Toggle("Night mode", isOn: $kiosk.sleepEnabled)
+            if kiosk.sleepEnabled {
+                DatePicker("Dim at", selection: timeBinding($kiosk.sleepStart), displayedComponents: .hourAndMinute)
+                DatePicker("Wake at", selection: timeBinding($kiosk.sleepEnd), displayedComponents: .hourAndMinute)
+                HStack {
+                    Image(systemName: "sun.min")
+                    Slider(value: $kiosk.sleepBrightness, in: 0...0.4)
+                    Image(systemName: "sun.max")
+                }
+            }
+            LabeledContent("Weather", value: weatherStatus)
+        } header: {
+            Text("Kitchen display")
+        } footer: {
+            Text("At night the screen dims to a soft clock. A touch wakes it for 2 minutes. During the day, the slideshow starts after the iPad sits untouched; a touch brings the calendar back.")
+        }
+    }
+
+    private var weatherStatus: String {
+        switch weather.status {
+        case .ready: weather.lastUpdated.map { "Updated \($0.formatted(date: .omitted, time: .shortened))" } ?? "On"
+        case .needsLocationPermission: "Tap the weather in the header"
+        case .locationDenied: "Location is off"
+        case let .unavailable(why): why
+        case .idle: "—"
+        }
+    }
+
+    private func timeBinding(_ comps: Binding<DateComponents>) -> Binding<Date> {
+        Binding(
+            get: { Calendar.current.date(from: comps.wrappedValue) ?? .now },
+            set: { comps.wrappedValue = Calendar.current.dateComponents([.hour, .minute], from: $0) }
+        )
     }
 }

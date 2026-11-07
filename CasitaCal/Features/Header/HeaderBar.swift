@@ -17,11 +17,7 @@ struct HeaderBar: View {
                 }
             }
 
-            // Weather lands in Milestone 4 (WeatherKit).
-            Label("--°", systemImage: "cloud.sun")
-                .font(.title2.weight(.semibold))
-                .foregroundStyle(Palette.inkSecondary)
-                .symbolRenderingMode(.multicolor)
+            WeatherBadge()
 
             Spacer()
 

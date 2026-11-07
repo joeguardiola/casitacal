@@ -23,7 +23,9 @@ targets:
     type: application
     platform: iOS
     sources:
-      - CasitaCal
+      - path: CasitaCal
+        excludes:
+          - CasitaCal.entitlements
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn
@@ -34,6 +36,9 @@ targets:
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         GIDClientID: $(GOOGLE_CLIENT_ID)
+        CASITACAL_HAS_WEATHERKIT: $(CASITACAL_HAS_WEATHERKIT)
+        NSLocationWhenInUseUsageDescription: CasitaCal uses the iPad's location to show local weather on the kitchen display.
+        NSPhotoLibraryUsageDescription: CasitaCal shows photos from the album you choose as a slideshow when the kitchen display is idle.
         CFBundleURLTypes:
           - CFBundleURLSchemes:
               - $(GOOGLE_REVERSED_CLIENT_ID)

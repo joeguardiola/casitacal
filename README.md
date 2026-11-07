@@ -1,4 +1,6 @@
-# 🏡 CasitaCal
+<img src="docs/icon.png" alt="CasitaCal icon" width="96" align="left" style="margin-right:16px">
+
+# CasitaCal
 
 A personal, Skylight-style family calendar for a kitchen iPad.
 
@@ -46,7 +48,9 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - **Avatar filter:** tap a person in the header to hide or show their events.
 
 ### Kitchen display
-- Big clock and date in the header.
+- **Header:** big clock and date, plus current weather and today's high and low. Tap the weather for a 5-day forecast.
+- **Photo slideshow when idle:** after a few minutes untouched, the iPad becomes a photo frame. It shows an album you choose (ideally an iCloud Shared Album the whole family adds to), with the time, weather and next event on top.
+- **Night mode:** at night the screen dims to a soft clock. A touch wakes it for 2 minutes.
 - The screen never auto-locks while the app is open.
 - Works in landscape and portrait.
 - A warm, soft palette with large touch targets.
@@ -139,6 +143,12 @@ In the Google Calendar app, open an event, tap **Edit**, choose a **color**, and
 
 Or just put their name in the title: *"Emma piano"*.
 
+### Photo slideshow
+1. On any family iPhone, open the **Photos** app and tap **+ → New Shared Album** (e.g. "Kitchen Frame"). Invite everyone, **including the Apple ID the iPad uses**.
+2. On the iPad, accept the invite in the Photos app.
+3. In CasitaCal, go to **Photos → Allow photo access → Full Access**, then **Choose album**.
+4. Tap **Start slideshow** to preview it. It also starts by itself when the iPad sits idle (set the delay in **Settings → Kitchen display**). Tap anywhere to return to the calendar.
+
 ### Settings
 - **Family:**
   - Add, edit or remove people.
@@ -149,6 +159,10 @@ Or just put their name in the title: *"Emma piano"*.
   - Pick the **family calendar** (only calendars you can edit are listed).
   - See the last sync time and sign out.
 - **Calendar:** choose whether the week starts on **Monday** (the default) or Sunday.
+- **Kitchen display:**
+  - Set the slideshow delay (off, or 2, 5, 10, 15 or 30 minutes; 10 is the default).
+  - Turn night mode on or off, and set its times (10:00 PM to 6:30 AM by default) and brightness.
+  - See the weather status.
 
 ### Locking the iPad to CasitaCal (Guided Access)
 iPadOS's Guided Access keeps the kitchen iPad inside the app:
@@ -225,7 +239,21 @@ open CasitaCal.xcodeproj        # pick an iPad simulator and press ⌘R
    Or select the iPad in Xcode and press ⌘R.
 4. **Free Apple account only:** on the iPad, go to **Settings → General → VPN & Device Management → Developer App** and tap **Trust**.
 
-### 5. First launch
+### 5. Turn on weather (paid Apple Developer account)
+WeatherKit only works for apps signed by a paid team. Free-team builds show `--°`.
+1. Go to [developer.apple.com](https://developer.apple.com/account) → **Certificates, IDs & Profiles → Identifiers** → `com.guardiola.casitacal`.
+   - Under **Capabilities**, tick **WeatherKit**.
+   - Under **App Services**, tick **WeatherKit**.
+   - Click **Save**. It can take about 30 minutes to start working.
+2. In `Config/Local.xcconfig`, add:
+   ```
+   DEVELOPMENT_TEAM = <paid team ID>
+   CASITACAL_ENTITLEMENTS = CasitaCal/CasitaCal.entitlements
+   CASITACAL_HAS_WEATHERKIT = YES
+   ```
+3. Rebuild and install. Tap the weather in the header, then **Allow location**.
+
+### 6. First launch
 1. Tap **Sign in with Google**.
 2. On **"Google hasn't verified this app"**, tap **Advanced → Go to CasitaCal (unsafe)**. That's expected for a personal app.
 3. Google shows name and email first. Tap **Continue**, then **tick both calendar permissions**.
@@ -248,7 +276,12 @@ CasitaCal/
   Models/                    Member, CalendarEvent, EventDraft, AppCalendar (week start)
   Services/Google/           sign-in, Calendar REST client, DTOs, EventMapper (who's it for)
   Features/Calendar/         EventStore (sync and cache), layout math, Day/Week/Month/Schedule, sheets
-  Features/Header/           clock and avatar filter bar
+  Features/Header/           clock, weather badge and forecast, avatar filter bar
+  Features/Kiosk/            slideshow and night-clock overlays
+  Features/Photos/           album picker and preview
+  Services/Weather/          WeatherKit and one-shot location
+  Services/Photos/           PhotoKit album access
+  Services/Kiosk/            idle and night logic, touch watcher, screen dimming
   Features/Settings/         family, Google and calendar settings
 CasitaCalTests/              Swift Testing unit tests
 docs/                        GitHub Pages: home page and privacy policy
@@ -291,6 +324,8 @@ This repo is **public**. Never commit credentials or personal IDs.
 | **"Developer Mode disabled"** when installing | iPad Settings → Privacy & Security → **Developer Mode**. |
 | **Everything is gray (Everyone)** | Give people real names or nicknames in Settings, or tap events to assign them. See [Who's it for?](#whos-it-for). |
 | **Orange "Sync problem"** in the toolbar | Usually Wi-Fi. Cached events stay visible. Tap the badge to retry. |
+| **Weather shows `--°`** | Needs the paid Apple team with WeatherKit on (see setup step 5). Then tap the weather and choose **Allow location**. |
+| **Slideshow album isn't listed** | The iPad's Apple ID must have accepted the shared album invite, and Shared Albums must be on: iPad Settings → Apps → Photos. |
 | **A phone change hasn't appeared** | Wait up to 60 seconds, or switch views to force a refresh. |
 
 ---
@@ -302,8 +337,8 @@ This repo is **public**. Never commit credentials or personal IDs.
 | 1. App shell, design system, family profiles | ✅ Done |
 | 2. Google sign-in, Day/Week/Month/Schedule views, "who's it for" | ✅ Done |
 | 3. Add, edit and delete events, quick add, repeats, offline cache | ✅ Done |
-| 4. Kiosk: weather (WeatherKit), night sleep mode, idle photo slideshow (iCloud Shared Album) | ⏳ Next |
-| 5. Chores, lists and meals synced via iCloud (CloudKit) | Planned |
+| 4. Kiosk: weather (WeatherKit), night mode, idle photo slideshow (iCloud Shared Album) | ✅ Done (weather needs the paid team) |
+| 5. Chores, lists and meals synced via iCloud (CloudKit) | ⏳ Next |
 | 6. Sharing chores and lists across Apple IDs, iPhone companion layout, TestFlight | Planned |
 
 ---
