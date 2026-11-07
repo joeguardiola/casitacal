@@ -1,0 +1,25 @@
+# macOS / Xcode
+.DS_Store
+*.xcodeproj/
+build/
+DerivedData/
+xcuserdata/
+*.xcuserstate
+
+# ---- Secrets & personal config: never commit ----
+Config/Local.xcconfig
+*.local.xcconfig
+Secrets.xcconfig
+.env
+.env.*
+GoogleService-Info.plist
+client_secret*.json
+credentials*.json
+token*.json
+*.p8
+*.p12
+*.pem
+*.key
+*.cer
+*.mobileprovision
+*.provisionprofile

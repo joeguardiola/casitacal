@@ -1,0 +1,4 @@
+// Copy to Config/Local.xcconfig (gitignored) and fill in.
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+GOOGLE_CLIENT_ID = 1234567890-abc.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.1234567890-abc

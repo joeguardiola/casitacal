@@ -1,0 +1,23 @@
+#!/bin/sh
+# Blocks commits that contain likely credentials. Enable with:
+#   git config core.hooksPath .githooks
+status=0
+
+# 1) Forbidden files
+forbidden=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '(^|/)(Local\.xcconfig|\.env(\..*)?|GoogleService-Info\.plist|client_secret.*\.json|credentials.*\.json|token.*\.json)$|\.(p8|p12|pem|key|cer|mobileprovision|provisionprofile)$')
+if [ -n "$forbidden" ]; then
+  echo "✋ pre-commit: refusing to commit secret/personal files:"; echo "$forbidden" | sed 's/^/   /'
+  status=1
+fi
+
+# 2) Secret-looking content in added lines
+patterns='[0-9]+-[a-z0-9]{20,}\.apps\.googleusercontent\.com|com\.googleusercontent\.apps\.[0-9]+-|GOCSPX-|ya29\.[A-Za-z0-9_-]+|1//[A-Za-z0-9_-]{20,}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY-----|gh[pousr]_[A-Za-z0-9]{30,}|DEVELOPMENT_TEAM *= *[A-Z0-9]{10}'
+hits=$(git diff --cached -U0 --diff-filter=ACMR -- . ':(exclude).githooks/*' ':(exclude)*.example' | grep -E '^\+' | grep -v '^+++' | grep -nE "$patterns")
+if [ -n "$hits" ]; then
+  echo "✋ pre-commit: staged changes look like they contain credentials / personal IDs:"
+  echo "$hits" | sed 's/^/   /'
+  status=1
+fi
+
+[ $status -ne 0 ] && echo "   Move these into Config/Local.xcconfig (gitignored). Bypass only if certain: git commit --no-verify"
+exit $status

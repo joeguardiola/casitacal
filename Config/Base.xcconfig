@@ -1,0 +1,9 @@
+// Committed build settings. NO secrets or personal IDs here.
+// Personal values (team ID, Google client ID) live in Config/Local.xcconfig,
+// which is gitignored. Copy Config/Local.xcconfig.example to get started.
+
+DEVELOPMENT_TEAM =
+GOOGLE_CLIENT_ID =
+GOOGLE_REVERSED_CLIENT_ID =
+
+#include? "Local.xcconfig"
