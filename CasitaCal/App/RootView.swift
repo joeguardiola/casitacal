@@ -28,13 +28,11 @@ struct RootView: View {
 
     var body: some View {
         if sizeClass == .compact {
+            // Phone: companion tabs (no photo frame on a phone).
             TabView(selection: $section) {
-                ForEach(AppSection.allCases) { s in
+                ForEach(AppSection.allCases.filter { $0 != .photos }) { s in
                     Tab(s.title, systemImage: s.systemImage, value: s) {
-                        NavigationStack {
-                            SectionContent(section: s)
-                                .navigationTitle(s.title)
-                        }
+                        SectionContent(section: s)
                     }
                 }
             }
@@ -55,8 +53,19 @@ struct RootView: View {
 
 struct SectionContent: View {
     let section: AppSection
+    @Environment(Persistence.self) private var persistence
 
     var body: some View {
+        // Household screens wait for the household to arrive on phones (iCloud).
+        if [.chores, .lists, .meals].contains(section) && !persistence.hasHousehold {
+            WaitingForHouseholdView()
+        } else {
+            content
+        }
+    }
+
+    @ViewBuilder
+    private var content: some View {
         switch section {
         case .calendar: CalendarScreen()
         case .chores: ChoresScreen()

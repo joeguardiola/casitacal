@@ -42,7 +42,11 @@ struct SettingsScreen: View {
 
                 CalendarPrefsSection()
 
-                KitchenDisplaySection()
+                HouseholdSharingSection()
+
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                    KitchenDisplaySection()
+                }
 
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")

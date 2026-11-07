@@ -23,6 +23,7 @@ struct MealsScreen: View {
     @AppStorage("meals.showSnack") private var showSnack = false
     @State private var anchor = Date()
     @State private var editing: MealCell?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     struct MealCell: Identifiable, Hashable {
         var day: String
@@ -50,24 +51,36 @@ struct MealsScreen: View {
                     CircleNavButton(symbol: "chevron.left", label: "Previous week") { shift(-1) }
                     CircleNavButton(symbol: "chevron.right", label: "Next week") { shift(1) }
                 }
-                Text(title).font(.title.weight(.bold))
-                if !CalendarRanges.range(for: .week, anchor: anchor).contains(Date()) {
+                Text(title)
+                    .font(sizeClass == .compact ? .title3.weight(.bold) : .title.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                if sizeClass != .compact, !CalendarRanges.range(for: .week, anchor: anchor).contains(Date()) {
                     Button("This week") { withAnimation(.snappy) { anchor = Date() } }
                         .buttonStyle(.bordered).controlSize(.large)
                 }
                 Spacer()
                 Menu {
+                    Button("This week") { withAnimation(.snappy) { anchor = Date() } }
                     Toggle("Breakfast", isOn: $showBreakfast)
                     Toggle("Lunch", isOn: $showLunch)
                     Toggle("Snacks", isOn: $showSnack)
                 } label: {
-                    Label("Meals shown", systemImage: "slider.horizontal.3")
+                    if sizeClass == .compact {
+                        Image(systemName: "slider.horizontal.3")
+                    } else {
+                        Label("Meals shown", systemImage: "slider.horizontal.3")
+                    }
                 }
                 .buttonStyle(.bordered).controlSize(.large)
             }
-            MealGrid(days: days, slots: slots) { editing = $0 }
+            if sizeClass == .compact {
+                MealList(days: days, slots: slots) { editing = $0 }
+            } else {
+                MealGrid(days: days, slots: slots) { editing = $0 }
+            }
         }
-        .padding(24)
+        .padding(sizeClass == .compact ? 14 : 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         .sheet(item: $editing) { MealEditor(cell: $0) }
@@ -161,12 +174,65 @@ private struct MealGrid: View {
     }
 }
 
+/// Phone: one card per day, meals listed inside.
+private struct MealList: View {
+    let days: [Date]
+    let slots: [MealSlot]
+    var onEdit: (MealsScreen.MealCell) -> Void
+
+    @FetchRequest private var meals: FetchedResults<CDMeal>
+
+    init(days: [Date], slots: [MealSlot], onEdit: @escaping (MealsScreen.MealCell) -> Void) {
+        self.days = days
+        self.slots = slots
+        self.onEdit = onEdit
+        _meals = FetchRequest(sortDescriptors: [], predicate: NSPredicate(format: "day IN %@", days.map { DayKey.from($0) }))
+    }
+
+    var body: some View {
+        let byCell = Dictionary(meals.map { ("\($0.day ?? "")-\($0.slot ?? "")", $0) }, uniquingKeysWith: { a, _ in a })
+        ScrollView {
+            VStack(spacing: 12) {
+                ForEach(days, id: \.self) { day in
+                    let key = DayKey.from(day)
+                    let isToday = Calendar.app.isDateInToday(day)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(day, format: .dateTime.weekday(.wide).month(.abbreviated).day())
+                            .font(.headline)
+                            .foregroundStyle(isToday ? Palette.accent : Palette.ink)
+                        ForEach(slots) { slot in
+                            Button { onEdit(.init(day: key, slot: slot)) } label: {
+                                HStack(spacing: 10) {
+                                    Text(slot.emoji)
+                                    Text(slot.label).foregroundStyle(Palette.inkSecondary).frame(width: 80, alignment: .leading)
+                                    Text(byCell["\(key)-\(slot.rawValue)"]?.title ?? "—")
+                                        .foregroundStyle(Palette.ink)
+                                        .lineLimit(1)
+                                    Spacer()
+                                }
+                                .padding(.vertical, 4)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Palette.surface, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .strokeBorder(isToday ? Palette.accent.opacity(0.5) : Palette.hairline, lineWidth: isToday ? 2 : 1))
+                }
+            }
+        }
+    }
+}
+
 private struct MealEditor: View {
     let cell: MealsScreen.MealCell
 
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Environment(HouseholdData.self) private var household
+    @Environment(Persistence.self) private var persistence
     @State private var title = ""
     @State private var notes = ""
     @State private var existing: CDMeal?
@@ -228,11 +294,11 @@ private struct MealEditor: View {
             if let existing { context.delete(existing) }
         } else {
             let meal = existing ?? {
-                let m = CDMeal(context: context)
+                let m = persistence.insert(CDMeal.self)
                 m.id = UUID()
                 m.day = cell.day
                 m.slot = cell.slot.rawValue
-                m.household = household.persistence.household()
+                m.household = persistence.household()
                 return m
             }()
             meal.title = trimmed

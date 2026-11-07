@@ -50,7 +50,7 @@ final class ChoreStore {
             $0.day == key && ($0.memberID ?? "") == (member?.uuidString ?? "")
         }
         if existing.isEmpty {
-            let c = CDChoreCompletion(context: persistence.context)
+            let c = persistence.insert(CDChoreCompletion.self)
             c.id = UUID()
             c.day = key
             c.memberID = member?.uuidString ?? ""
@@ -65,7 +65,7 @@ final class ChoreStore {
 
     func save(_ chore: Chore) {
         let row = fetchChore(chore.id) ?? {
-            let r = CDChore(context: persistence.context)
+            let r = persistence.insert(CDChore.self)
             r.id = chore.id
             r.createdAt = Date()
             r.sortOrder = Int16(chores.count)

@@ -6,7 +6,18 @@ struct CalendarScreen: View {
     @Environment(MemberStore.self) private var memberStore
     @Environment(\.scenePhase) private var scenePhase
 
-    @AppStorage("calendar.mode") private var mode: CalendarMode = .week
+    @AppStorage("calendar.mode") private var storedMode: CalendarMode = .week
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isCompact: Bool { sizeClass == .compact }
+    /// Phones only get Day and Schedule (Week/Month need iPad width).
+    private var mode: CalendarMode {
+        isCompact && (storedMode == .week || storedMode == .month) ? .schedule : storedMode
+    }
+    private var availableModes: [CalendarMode] { isCompact ? [.day, .schedule] : CalendarMode.allCases }
+    /// Picker binding that shows the effective mode (phones map Week/Month to Schedule).
+    private var modeBinding: Binding<CalendarMode> {
+        Binding(get: { mode }, set: { new in withAnimation(.snappy) { storedMode = new } })
+    }
     @AppStorage("calendar.dayByPerson") private var dayByPerson = true
     // Observed so the views redraw when the week-start setting changes.
     @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
@@ -31,7 +42,7 @@ struct CalendarScreen: View {
             toolbar
             content
         }
-        .padding(24)
+        .padding(isCompact ? 14 : 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         // Reload when the range or calendar changes, then every 60s while visible & active.
@@ -83,7 +94,7 @@ struct CalendarScreen: View {
         } else {
             switch mode {
             case .day:
-                DayView(day: anchor, events: visibleEvents, members: visibleMembers, byPerson: $dayByPerson) { selected = $0 }
+                DayView(day: anchor, events: visibleEvents, members: visibleMembers, byPerson: isCompact ? .constant(false) : $dayByPerson) { selected = $0 }
             case .week:
                 WeekView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members,
                          onSelect: { selected = $0 }, onOpenDay: openDay)
@@ -99,11 +110,39 @@ struct CalendarScreen: View {
     private func openDay(_ day: Date) {
         withAnimation(.snappy) {
             anchor = day
-            mode = .day
+            storedMode = .day
         }
     }
 
+    @ViewBuilder
     private var toolbar: some View {
+        if isCompact { compactToolbar } else { regularToolbar }
+    }
+
+    private var compactToolbar: some View {
+        VStack(spacing: 10) {
+            HStack(spacing: 8) {
+                navButton("chevron.left", label: "Previous") { anchor = CalendarRanges.step(anchor, mode: mode, by: -1) }
+                Text(title)
+                    .font(.title3.weight(.bold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: .infinity)
+                navButton("chevron.right", label: "Next") { anchor = CalendarRanges.step(anchor, mode: mode, by: 1) }
+            }
+            HStack {
+                Picker("View", selection: modeBinding) {
+                    ForEach(availableModes) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                Button("Today") { withAnimation(.snappy) { anchor = Date() } }
+                    .buttonStyle(.bordered)
+            }
+            syncStatus
+        }
+    }
+
+    private var regularToolbar: some View {
         HStack(spacing: 14) {
             HStack(spacing: 4) {
                 navButton("chevron.left", label: "Previous") { anchor = CalendarRanges.step(anchor, mode: mode, by: -1) }
@@ -131,8 +170,8 @@ struct CalendarScreen: View {
                 .controlSize(.large)
             }
 
-            Picker("View", selection: $mode.animation(.snappy)) {
-                ForEach(CalendarMode.allCases) { Text($0.title).tag($0) }
+            Picker("View", selection: modeBinding) {
+                ForEach(availableModes) { Text($0.title).tag($0) }
             }
             .pickerStyle(.segmented)
             .frame(width: 360)

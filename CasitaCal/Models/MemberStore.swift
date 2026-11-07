@@ -41,7 +41,7 @@ final class MemberStore {
 
     func upsert(_ member: Member) {
         let row = fetch(member.id) ?? {
-            let r = CDMember(context: persistence.context)
+            let r = persistence.insert(CDMember.self)
             r.id = member.id
             r.sortOrder = Int16(members.count)
             r.household = persistence.household()
@@ -120,12 +120,13 @@ final class MemberStore {
     /// First run on the new database: bring over members from older builds (same IDs,
     /// so Google events tagged with them still match), or start with a placeholder family.
     private func migrateOrSeedIfNeeded() {
+        guard persistence.isHouseholdHost else { return } // phones get members from the household
         let request = NSFetchRequest<CDMember>(entityName: "CDMember")
         guard (try? persistence.context.count(for: request)) == 0 else { return }
         let legacy = defaults.data(forKey: Self.legacyKey).flatMap { try? JSONDecoder().decode([Member].self, from: $0) }
         let household = persistence.household()
         for (i, m) in (legacy ?? Self.starterFamily).enumerated() {
-            let row = CDMember(context: persistence.context)
+            let row = persistence.insert(CDMember.self)
             row.id = m.id
             row.sortOrder = Int16(i)
             row.household = household

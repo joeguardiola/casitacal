@@ -9,6 +9,7 @@ struct ListsScreen: View {
 
     @AppStorage("lists.selected") private var selectedID: String = ""
     @State private var naming: NameDraft?
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     struct NameDraft: Identifiable {
         var id = UUID()
@@ -22,6 +23,39 @@ struct ListsScreen: View {
     }
 
     var body: some View {
+        if sizeClass == .compact { phoneBody } else { padBody }
+    }
+
+    /// Phone: list of lists → tap into one.
+    private var phoneBody: some View {
+        NavigationStack {
+            List {
+                ForEach(lists, id: \.objectID) { list in
+                    NavigationLink {
+                        ListDetail(list: list, onRename: {
+                            naming = NameDraft(list: list, title: list.title ?? "", emoji: list.emoji ?? "📝")
+                        })
+                        .navigationBarTitleDisplayMode(.inline)
+                    } label: {
+                        ListRow(list: list, isSelected: false)
+                    }
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+            }
+            .listStyle(.plain)
+            .navigationTitle("Lists")
+            .toolbar {
+                Button("New list", systemImage: "plus") { naming = NameDraft() }
+            }
+            .background(Palette.canvas)
+        }
+        .sheet(item: $naming) { draft in
+            ListNameSheet(draft: draft) { _ in }
+        }
+    }
+
+    private var padBody: some View {
         HStack(alignment: .top, spacing: 18) {
             sidebar.frame(width: 280)
             Group {
@@ -102,6 +136,7 @@ private struct ListDetail: View {
     var onRename: () -> Void
 
     @Environment(\.managedObjectContext) private var context
+    @Environment(Persistence.self) private var persistence
     @FetchRequest private var items: FetchedResults<CDListItem>
     @State private var newItem = ""
     @State private var confirmDelete = false
@@ -182,7 +217,7 @@ private struct ListDetail: View {
     private func add() {
         let title = newItem.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return }
-        let item = CDListItem(context: context)
+        let item = persistence.insert(CDListItem.self)
         item.id = UUID()
         item.title = title
         item.createdAt = Date()
@@ -237,7 +272,7 @@ private struct ListNameSheet: View {
 
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @Environment(HouseholdData.self) private var household
+    @Environment(Persistence.self) private var persistence
 
     private let emojis = ["🛒", "✅", "📝", "🎁", "🧳", "🏠", "🔧", "🎄", "🎂", "📦", "💊", "🐾"]
 
@@ -265,11 +300,11 @@ private struct ListNameSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
                         let list = draft.list ?? {
-                            let l = CDList(context: context)
+                            let l = persistence.insert(CDList.self)
                             l.id = UUID()
                             l.createdAt = Date()
                             l.sortOrder = Int16.max
-                            l.household = household.persistence.household()
+                            l.household = persistence.household()
                             return l
                         }()
                         list.title = draft.title.trimmingCharacters(in: .whitespaces)

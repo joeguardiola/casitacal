@@ -2,8 +2,8 @@ import SwiftUI
 
 @main
 struct CasitaCalApp: App {
-    private let persistence: Persistence
-    @State private var household: HouseholdData
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    @State private var persistence: Persistence
     @State private var members: MemberStore
     @State private var chores: ChoreStore
     @State private var auth: GoogleAuth
@@ -13,10 +13,9 @@ struct CasitaCalApp: App {
     @State private var kiosk = KioskController()
 
     init() {
-        let persistence = Persistence()
+        let persistence = Persistence.shared
         persistence.seedListsIfNeeded()
-        self.persistence = persistence
-        _household = State(initialValue: HouseholdData(persistence))
+        _persistence = State(initialValue: persistence)
         _members = State(initialValue: MemberStore(persistence: persistence))
         _chores = State(initialValue: ChoreStore(persistence: persistence))
         let auth = GoogleAuth()
@@ -28,7 +27,7 @@ struct CasitaCalApp: App {
         WindowGroup {
             RootView()
                 .environment(\.managedObjectContext, persistence.context)
-                .environment(household)
+                .environment(persistence)
                 .environment(chores)
                 .environment(members)
                 .environment(auth)
@@ -42,10 +41,11 @@ struct CasitaCalApp: App {
                     await events.loadCalendars()
                 }
                 .task { await weather.keepFresh() }
-                .task { await kiosk.start() }
-                .onAppear {
-                    // Kitchen display: never auto-lock while the app is open.
+                .task {
+                    // Kitchen-display behaviour (idle slideshow, night dimming, no auto-lock) is iPad-only.
+                    guard UIDevice.current.userInterfaceIdiom == .pad else { return }
                     UIApplication.shared.isIdleTimerDisabled = true
+                    await kiosk.start()
                 }
         }
     }

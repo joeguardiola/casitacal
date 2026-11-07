@@ -7,6 +7,9 @@ struct ChoresScreen: View {
     @State private var day = Date()
     @State private var editing: Chore?
     @State private var isAdding = false
+    @State private var phoneColumn: UUID? // nil = Anyone
+    @State private var phoneShowsAnyone = false
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     private var columns: [Member?] {
         var cols: [Member?] = memberStore.members.filter(memberStore.isVisible)
@@ -26,6 +29,8 @@ struct ChoresScreen: View {
                     Button("Add a chore") { isAdding = true }.buttonStyle(.borderedProminent).controlSize(.large)
                 }
                 .frame(maxHeight: .infinity)
+            } else if sizeClass == .compact {
+                phoneLayout
             } else {
                 ScrollView(.horizontal) {
                     HStack(alignment: .top, spacing: 14) {
@@ -39,12 +44,51 @@ struct ChoresScreen: View {
                 .scrollIndicators(.hidden)
             }
         }
-        .padding(24)
+        .padding(sizeClass == .compact ? 14 : 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         .overlay(alignment: .bottomTrailing) { AddButton(label: "Add chore") { isAdding = true } }
         .sheet(isPresented: $isAdding) { ChoreEditor(chore: nil, defaultDay: day) }
         .sheet(item: $editing) { ChoreEditor(chore: $0, defaultDay: day) }
+    }
+
+    /// Phone: pick a person, see their column full width.
+    private var phoneLayout: some View {
+        let selected: Member? = phoneShowsAnyone ? nil
+            : (memberStore.members.first { $0.id == phoneColumn } ?? memberStore.members.first)
+        return VStack(spacing: 12) {
+            ScrollView(.horizontal) {
+                HStack(spacing: 12) {
+                    ForEach(memberStore.members) { m in
+                        Button {
+                            phoneShowsAnyone = false
+                            phoneColumn = m.id
+                        } label: {
+                            VStack(spacing: 4) {
+                                ProfileAvatar(member: m, size: 48, isActive: !phoneShowsAnyone && selected?.id == m.id)
+                                Text(m.name).font(.caption.weight(.semibold)).lineLimit(1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    if store.hasAnyoneChores(on: day) {
+                        Button { phoneShowsAnyone = true } label: {
+                            VStack(spacing: 4) {
+                                Image(systemName: "person.3.fill")
+                                    .foregroundStyle(Palette.family)
+                                    .frame(width: 48, height: 48)
+                                    .background(Circle().fill(Palette.family.opacity(phoneShowsAnyone ? 0.3 : 0.1)))
+                                Text("Anyone").font(.caption.weight(.semibold))
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+            .scrollIndicators(.hidden)
+            ChoreColumn(member: selected, day: day, onEdit: { editing = $0 })
+        }
     }
 
     private var columnWidth: CGFloat {
@@ -58,7 +102,9 @@ struct ChoresScreen: View {
                 CircleNavButton(symbol: "chevron.right", label: "Next day") { shift(1) }
             }
             Text(Calendar.app.isDateInToday(day) ? "Today" : day.formatted(.dateTime.weekday(.wide).month(.wide).day()))
-                .font(.title.weight(.bold))
+                .font(sizeClass == .compact ? .title3.weight(.bold) : .title.weight(.bold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             if !Calendar.app.isDateInToday(day) {
                 Button("Today") { withAnimation(.snappy) { day = Date() } }
                     .buttonStyle(.bordered).controlSize(.large)

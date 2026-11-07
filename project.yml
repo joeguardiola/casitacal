@@ -39,6 +39,7 @@ targets:
         CASITACAL_HAS_WEATHERKIT: $(CASITACAL_HAS_WEATHERKIT)
         CASITACAL_HAS_ICLOUD: $(CASITACAL_HAS_ICLOUD)
         UIBackgroundModes: [remote-notification] # CloudKit change pushes
+        CKSharingSupported: true                 # accept household invite links
         NSLocationWhenInUseUsageDescription: CasitaCal uses the iPad's location to show local weather on the kitchen display.
         NSPhotoLibraryUsageDescription: CasitaCal shows photos from the album you choose as a slideshow when the kitchen display is idle.
         CFBundleURLTypes:

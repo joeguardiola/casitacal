@@ -6,6 +6,7 @@ struct ScheduleView: View {
     let events: [CalendarEvent]
     let members: [Member]
     var onSelect: (CalendarEvent) -> Void
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         let groups = days.compactMap { day -> (Date, [CalendarEvent])? in
@@ -15,7 +16,7 @@ struct ScheduleView: View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 22) {
                 ForEach(groups, id: \.0) { day, items in
-                    HStack(alignment: .top, spacing: 24) {
+                    HStack(alignment: .top, spacing: sizeClass == .compact ? 10 : 24) {
                         dayBadge(day)
                         VStack(spacing: 10) {
                             if items.isEmpty {
@@ -26,7 +27,7 @@ struct ScheduleView: View {
                                     .padding(.vertical, 14)
                             }
                             ForEach(items) { e in
-                                EventCard(event: e, style: EventStyle(e, members: members), size: .large)
+                                EventCard(event: e, style: EventStyle(e, members: members), size: sizeClass == .compact ? .regular : .large)
                                     .onTapGesture { onSelect(e) }
                             }
                         }
@@ -48,12 +49,12 @@ struct ScheduleView: View {
                 .font(.headline)
                 .foregroundStyle(isToday ? Palette.accent : Palette.inkSecondary)
             Text(day, format: .dateTime.day())
-                .font(.system(size: 38, weight: .bold, design: .rounded))
+                .font(.system(size: sizeClass == .compact ? 28 : 38, weight: .bold, design: .rounded))
                 .foregroundStyle(isToday ? Palette.accent : Palette.ink)
             Text(day, format: .dateTime.month(.abbreviated))
                 .font(.subheadline)
                 .foregroundStyle(Palette.inkSecondary)
         }
-        .frame(width: 80)
+        .frame(width: sizeClass == .compact ? 52 : 80)
     }
 }
