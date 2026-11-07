@@ -9,7 +9,7 @@ enum CalendarMode: String, CaseIterable, Identifiable {
 /// Date math for each calendar mode.
 enum CalendarRanges {
     /// The interval a mode needs loaded for a given anchor date.
-    static func range(for mode: CalendarMode, anchor: Date, calendar: Calendar = .current) -> DateInterval {
+    static func range(for mode: CalendarMode, anchor: Date, calendar: Calendar = .app) -> DateInterval {
         switch mode {
         case .day:
             return calendar.dateInterval(of: .day, for: anchor)!
@@ -27,7 +27,7 @@ enum CalendarRanges {
     static let scheduleDays = 30
 
     /// Step the anchor forward/back by one page of the mode.
-    static func step(_ anchor: Date, mode: CalendarMode, by n: Int, calendar: Calendar = .current) -> Date {
+    static func step(_ anchor: Date, mode: CalendarMode, by n: Int, calendar: Calendar = .app) -> Date {
         let component: Calendar.Component = switch mode {
         case .day: .day
         case .week: .weekOfYear
@@ -37,7 +37,7 @@ enum CalendarRanges {
         return calendar.date(byAdding: component, value: n, to: anchor) ?? anchor
     }
 
-    static func days(in interval: DateInterval, calendar: Calendar = .current) -> [Date] {
+    static func days(in interval: DateInterval, calendar: Calendar = .app) -> [Date] {
         var days: [Date] = []
         var d = calendar.startOfDay(for: interval.start)
         while d < interval.end {
@@ -48,7 +48,7 @@ enum CalendarRanges {
     }
 
     /// Whole weeks covering the anchor's month (5 or 6 rows of 7 days).
-    static func monthGrid(for anchor: Date, calendar: Calendar = .current) -> [Date] {
+    static func monthGrid(for anchor: Date, calendar: Calendar = .app) -> [Date] {
         let month = calendar.dateInterval(of: .month, for: anchor)!
         let firstWeek = calendar.dateInterval(of: .weekOfYear, for: month.start)!
         let lastDay = calendar.date(byAdding: .day, value: -1, to: month.end)!
@@ -72,12 +72,12 @@ enum DayLayout {
     /// Events shorter than this still get room to show their title.
     static let minimumDuration: TimeInterval = 30 * 60
 
-    static func allDay(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .current) -> [CalendarEvent] {
+    static func allDay(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .app) -> [CalendarEvent] {
         events.filter { $0.isAllDay && $0.overlaps(day: day, calendar: calendar) }
     }
 
     /// Timed events on `day`, clipped to the day, with side-by-side columns for overlaps.
-    static func timed(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .current) -> [PositionedEvent] {
+    static func timed(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .app) -> [PositionedEvent] {
         let dayStart = calendar.startOfDay(for: day)
         let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
 
@@ -118,7 +118,7 @@ enum DayLayout {
     }
 
     /// Everything on a day (all-day first, then by start), for list-style views.
-    static func agenda(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .current) -> [CalendarEvent] {
+    static func agenda(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .app) -> [CalendarEvent] {
         events
             .filter { $0.overlaps(day: day, calendar: calendar) }
             .sorted { ($0.isAllDay ? 0 : 1, $0.start, $0.title) < ($1.isAllDay ? 0 : 1, $1.start, $1.title) }

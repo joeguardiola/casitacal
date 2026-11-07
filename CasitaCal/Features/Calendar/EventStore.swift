@@ -1,40 +1,49 @@
 import Foundation
 import Observation
 
-/// Loads events for the visible date range from the family Google Calendar
-/// and keeps them fresh while the app is on screen.
+/// The family calendar's events: loaded from Google, cached on the iPad for instant
+/// (and offline) display, refreshed every 60s while on screen, and edited in place.
 @MainActor
 @Observable
 final class EventStore {
     private(set) var calendars: [GCalCalendar] = []
+    /// Everything cached for the selected calendar (views pick out the days they show).
     private(set) var events: [CalendarEvent] = []
     private(set) var isLoading = false
     private(set) var lastError: String?
     private(set) var lastSynced: Date?
+    private(set) var loadedRange: DateInterval?
 
     var selectedCalendarId: String? {
         didSet {
+            guard selectedCalendarId != oldValue else { return }
             defaults.set(selectedCalendarId, forKey: Self.calendarKey)
-            events = []
             loadedRange = nil
+            lastSynced = nil
+            events = cache.load(calendarId: selectedCalendarId)
         }
     }
 
     var selectedCalendar: GCalCalendar? { calendars.first { $0.id == selectedCalendarId } }
 
-    private(set) var loadedRange: DateInterval?
     private let auth: GoogleAuth
     private let defaults: UserDefaults
+    private let cache: EventCache
     private static let calendarKey = "casitacal.familyCalendarId"
     private var client: GoogleCalendarClient {
         GoogleCalendarClient(tokenProvider: { [auth] in try await auth.accessToken() })
     }
 
-    init(auth: GoogleAuth, defaults: UserDefaults = .standard) {
+    init(auth: GoogleAuth, defaults: UserDefaults = .standard, cache: EventCache = EventCache()) {
         self.auth = auth
         self.defaults = defaults
-        self.selectedCalendarId = defaults.string(forKey: Self.calendarKey)
+        self.cache = cache
+        let id = defaults.string(forKey: Self.calendarKey)
+        self.selectedCalendarId = id
+        self.events = cache.load(calendarId: id)
     }
+
+    // MARK: - Reading
 
     func loadCalendars() async {
         guard auth.isSignedIn else { return }
@@ -47,29 +56,31 @@ final class EventStore {
         }
     }
 
-    /// Fetch events for `range`. Safe to call repeatedly (polling).
+    /// Fetch events for `range` and merge them into the cache. Safe to call repeatedly.
     func load(_ range: DateInterval) async {
         guard auth.isSignedIn, let calendarId = selectedCalendarId else { return }
         isLoading = true
         defer { isLoading = false }
         do {
             let raw = try await client.events(calendarId: calendarId, from: range.start, to: range.end)
-            // The calendar or range may have changed while we were waiting.
-            guard calendarId == selectedCalendarId else { return }
-            events = raw.compactMap { CalendarEvent(google: $0) }
-                .sorted { ($0.start, $0.end) < ($1.start, $1.end) }
+            guard calendarId == selectedCalendarId else { return } // switched calendars mid-request
+            let fresh = raw.compactMap { CalendarEvent(google: $0) }
+            events = EventCache.merge(fresh, into: events, covering: range)
+            cache.save(events, calendarId: calendarId)
             loadedRange = range
             lastSynced = Date()
             lastError = nil
         } catch is CancellationError {
-            // View went away mid-request.
         } catch let error as URLError where error.code == .cancelled {
+        } catch let error as URLError {
+            // Offline etc.: keep showing the cache, just flag it.
+            lastError = error.localizedDescription
         } catch {
             lastError = error.localizedDescription
         }
     }
 
-    /// Reload `range` now and then every `interval` seconds until the task is cancelled.
+    /// Reload `range` now and then every `interval` until the task is cancelled.
     func keepFresh(_ range: DateInterval, every interval: Duration = .seconds(60)) async {
         while !Task.isCancelled {
             await load(range)
@@ -77,33 +88,154 @@ final class EventStore {
         }
     }
 
-    /// Assign people to an event and save it to Google.
-    ///
-    /// One person: just the event color (so a phone can change it later).
-    /// Several people: first person's color + CasitaCal's hidden tag listing everyone.
-    /// Nobody: calendar color, tag cleared.
-    func assign(_ event: CalendarEvent, to people: [Member], allRepeats: Bool) async throws {
-        guard let calendarId = selectedCalendarId else { return }
-        let targetId = allRepeats ? (event.recurringEventId ?? event.id) : event.id
-        let colorId = people.first?.color.googleColorId
-        let tag = people.count > 1 ? people.map(\.id.uuidString).joined(separator: ",") : ""
-        let patch = GCalEventPatch(colorId: colorId, sharedProperties: [CalendarEvent.membersPropertyKey: tag])
+    // MARK: - Writing
 
-        try await client.patchEvent(calendarId: calendarId, eventId: targetId, patch)
+    func create(_ draft: EventDraft, members: [Member]) async throws {
+        let calendarId = try requireCalendar()
+        try await client.insertEvent(calendarId: calendarId, draft.body(members: members, includeRecurrence: true))
+        await refresh()
+    }
+
+    /// Google's natural-language add ("Soccer Tue 4pm"), then tag people if any were picked.
+    func quickAdd(_ text: String, people: [Member]) async throws {
+        let calendarId = try requireCalendar()
+        let created = try await client.quickAdd(calendarId: calendarId, text: text)
+        if !people.isEmpty {
+            try await client.patchEvent(calendarId: calendarId, eventId: created.id, Self.assignmentPatch(people))
+        }
+        await refresh()
+    }
+
+    func update(_ event: CalendarEvent, with draft: EventDraft, members: [Member], allRepeats: Bool) async throws {
+        let calendarId = try requireCalendar()
+        if allRepeats, let seriesId = event.recurringEventId {
+            // Keep the series' first date; apply the edited time-of-day / length to it.
+            let master = try await client.event(calendarId: calendarId, eventId: seriesId)
+            guard let masterEvent = CalendarEvent(google: master) else { return }
+            let seriesDraft = Self.retime(draft, ontoSeriesStarting: masterEvent.start)
+            try await client.updateEvent(calendarId: calendarId, eventId: seriesId,
+                                         seriesDraft.body(members: members, includeRecurrence: false))
+        } else {
+            try await client.updateEvent(calendarId: calendarId, eventId: event.id,
+                                         draft.body(members: members, includeRecurrence: !event.isRecurring))
+        }
+        await refresh()
+    }
+
+    func delete(_ event: CalendarEvent, allRepeats: Bool) async throws {
+        let calendarId = try requireCalendar()
+        let targetId = allRepeats ? (event.recurringEventId ?? event.id) : event.id
+        try await client.deleteEvent(calendarId: calendarId, eventId: targetId)
+        events.removeAll { $0.id == event.id || (allRepeats && $0.recurringEventId == targetId) }
+        cache.save(events, calendarId: calendarId)
+        await refresh()
+    }
+
+    /// Assign people to an event (from the detail sheet).
+    func assign(_ event: CalendarEvent, to people: [Member], allRepeats: Bool) async throws {
+        let calendarId = try requireCalendar()
+        let targetId = allRepeats ? (event.recurringEventId ?? event.id) : event.id
+        try await client.patchEvent(calendarId: calendarId, eventId: targetId, Self.assignmentPatch(people))
 
         // Show the change right away, then confirm with a fresh load.
         let tagIDs = people.count > 1 ? people.map(\.id) : []
         for i in events.indices where events[i].id == event.id || (allRepeats && events[i].recurringEventId == targetId) {
-            events[i].colorId = colorId
+            events[i].colorId = people.first?.color.googleColorId
             events[i].taggedMemberIDs = tagIDs
         }
-        if let loadedRange { await load(loadedRange) }
+        await refresh()
     }
 
     func reset() {
+        cache.clearAll()
         calendars = []
         events = []
         loadedRange = nil
         lastSynced = nil
+    }
+
+    // MARK: - Helpers
+
+    /// One person: just the color (a phone can change it later).
+    /// Several: first person's color + hidden tag listing everyone. Nobody: calendar color.
+    nonisolated static func assignmentPatch(_ people: [Member]) -> GCalEventPatch {
+        GCalEventPatch(
+            colorId: people.first?.color.googleColorId,
+            sharedProperties: [CalendarEvent.membersPropertyKey: people.count > 1 ? people.map(\.id.uuidString).joined(separator: ",") : ""]
+        )
+    }
+
+    /// Move a draft's time-of-day and length onto the series' original first day.
+    nonisolated static func retime(_ draft: EventDraft, ontoSeriesStarting seriesStart: Date, calendar: Calendar = .app) -> EventDraft {
+        var d = draft
+        let seriesDay = calendar.startOfDay(for: seriesStart)
+        if draft.isAllDay {
+            let spanDays = calendar.dateComponents([.day], from: calendar.startOfDay(for: draft.start), to: calendar.startOfDay(for: draft.end)).day ?? 0
+            d.start = seriesDay
+            d.end = calendar.date(byAdding: .day, value: spanDays, to: seriesDay)!
+        } else {
+            let t = calendar.dateComponents([.hour, .minute], from: draft.start)
+            let duration = draft.end.timeIntervalSince(draft.start)
+            d.start = calendar.date(bySettingHour: t.hour ?? 0, minute: t.minute ?? 0, second: 0, of: seriesDay)!
+            d.end = d.start.addingTimeInterval(duration)
+        }
+        return d
+    }
+
+    private func requireCalendar() throws -> String {
+        guard auth.isSignedIn, let id = selectedCalendarId else { throw GoogleCalendarError.notSignedIn }
+        return id
+    }
+
+    private func refresh() async {
+        if let loadedRange { await load(loadedRange) }
+    }
+}
+
+/// On-device JSON cache of events, one file per calendar, so the screen is never blank.
+struct EventCache {
+    var directory: URL = {
+        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("EventCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir
+    }()
+
+    /// Keep roughly two months back and four months ahead.
+    static let keepWindow: (past: Int, future: Int) = (60, 120)
+
+    func load(calendarId: String?) -> [CalendarEvent] {
+        guard let calendarId, let data = try? Data(contentsOf: file(for: calendarId)) else { return [] }
+        return (try? JSONDecoder().decode([CalendarEvent].self, from: data)) ?? []
+    }
+
+    func save(_ events: [CalendarEvent], calendarId: String) {
+        let now = Date()
+        let from = now.addingTimeInterval(-Double(Self.keepWindow.past) * 86400)
+        let to = now.addingTimeInterval(Double(Self.keepWindow.future) * 86400)
+        let trimmed = events.filter { $0.end >= from && $0.start <= to }
+        guard let data = try? JSONEncoder().encode(trimmed) else { return }
+        try? data.write(to: file(for: calendarId), options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
+    }
+
+    func clearAll() {
+        try? FileManager.default.removeItem(at: directory)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    }
+
+    /// Fresh results are the truth for `range`: drop cached events overlapping it, add the new ones.
+    static func merge(_ fresh: [CalendarEvent], into cached: [CalendarEvent], covering range: DateInterval) -> [CalendarEvent] {
+        let kept = cached.filter { e in
+            let overlaps = e.start == e.end
+                ? (e.start >= range.start && e.start < range.end)
+                : (e.start < range.end && e.end > range.start)
+            return !overlaps
+        }
+        return (kept + fresh).sorted { ($0.start, $0.end, $0.id) < ($1.start, $1.end, $1.id) }
+    }
+
+    private func file(for calendarId: String) -> URL {
+        let safe = calendarId.unicodeScalars.map { CharacterSet.alphanumerics.contains($0) ? String($0) : "_" }.joined()
+        return directory.appendingPathComponent("events-\(safe).json")
     }
 }

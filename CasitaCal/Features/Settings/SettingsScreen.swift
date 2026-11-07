@@ -40,6 +40,8 @@ struct SettingsScreen: View {
 
                 GoogleSettingsSection()
 
+                CalendarPrefsSection()
+
                 Section("About") {
                     LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
                 }
@@ -202,6 +204,19 @@ struct GoogleSettingsSection: View {
             Text("Google Calendar")
         } footer: {
             Text("Sign-in is stored securely in the iPad's Keychain.")
+        }
+    }
+}
+
+struct CalendarPrefsSection: View {
+    @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
+
+    var body: some View {
+        Section("Calendar") {
+            Picker("Week starts on", selection: $weekStartsOnMonday) {
+                Text("Monday").tag(true)
+                Text("Sunday").tag(false)
+            }
         }
     }
 }

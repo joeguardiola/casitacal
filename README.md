@@ -2,24 +2,310 @@
 
 A personal, Skylight-style family calendar for a kitchen iPad.
 
-- **Events** sync two-way with a shared Google Calendar (phones keep using the Google Calendar app).
-- **Family members** each own a Google event color, so events tagged on a phone show up with the right person.
-- **Chores, lists and meals** sync through iCloud (CloudKit sharing) — coming soon.
-- **Kiosk extras:** big clock, weather, sleep mode, photo slideshow — coming soon.
+CasitaCal turns an iPad into a wall/counter display that shows what the family is doing today and this week, color-coded by person. It reads from and writes to a **shared Google Calendar**, so everyone keeps using the normal Google Calendar app on their phones — add something on the iPad and it's on your phone; add something on your phone and it's on the iPad.
 
-## Build
+> Inspired by [Skylight Calendar](https://www.skylightframe.com/) and [Kinboard](https://github.com/svenger87/kinboard). This is a personal project, not a product.
 
-Requires Xcode 26+ and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
+---
 
-```sh
-xcodegen generate
-open CasitaCal.xcodeproj
+## Contents
+
+- [Features](#features)
+- [How it works](#how-it-works)
+- [Using CasitaCal](#using-casitacal)
+- [Setup from scratch](#setup-from-scratch)
+- [Development](#development)
+- [Troubleshooting](#troubleshooting)
+- [Roadmap](#roadmap)
+
+---
+
+## Features
+
+### Calendar
+- **Four views:**
+  - **Day:** a time grid with an optional column per person.
+  - **Week:** Monday–Sunday columns of event cards, readable across the room.
+  - **Month:** a grid with event chips.
+  - **Schedule:** a 30-day agenda.
+- **Two-way Google Calendar sync:**
+  - Changes on a phone appear on the iPad within about 60 seconds.
+  - Changes on the iPad reach Google instantly.
+- **Quick add:** type *"Soccer practice Tue 4pm"* and Google works out the date and time.
+- **Full event editor** with:
+  - all-day or timed events
+  - start and end
+  - repeat: daily, weekdays, weekly, every 2 weeks, monthly, yearly
+  - people, location, notes
+- **Edit and delete,** with *only this event* / *all repeats* for repeating events.
+- **Offline cache:** the calendar shows instantly on launch and stays visible if Wi-Fi drops.
+
+### Family
+- **Profiles:** each person gets a name, an emoji avatar and a color. Colors match Google Calendar's 11 event colors.
+- **Automatic "who's it for":** CasitaCal works out each event's people from its color or the names in its title. Details are under [Who's it for?](#whos-it-for).
+- **Avatar filter:** tap a person in the header to hide or show their events.
+
+### Kitchen display
+- Big clock and date in the header.
+- The screen never auto-locks while the app is open.
+- Works in landscape and portrait.
+- A warm, soft palette with large touch targets.
+
+### iPhone
+- The same app runs on iPhone with a tab layout. This becomes the companion for chores, lists and meals in later milestones.
+
+---
+
+## How it works
+
+```
+ Phones (Google Calendar app) ──┐
+                                ├──►  Shared Google Calendar  ◄──►  CasitaCal on the kitchen iPad
+ Google Calendar on the web  ───┘         (source of truth)
 ```
 
-Tests:
+- **Google Calendar holds the data for events.** There's no CasitaCal server. The iPad talks directly to Google's Calendar API.
+- **Sync:**
+  - The visible dates refresh when the app opens, when it returns to the foreground, after every change you make, and every 60 seconds while it's on screen.
+  - Results are cached on the iPad.
 
+### Who's it for?
+
+Every event is assigned to zero or more family members. Events with nobody assigned show for **Everyone** in a neutral warm gray. CasitaCal checks these in order and the first match wins:
+
+| # | Signal | Example | Set from |
+|---|--------|---------|----------|
+| 1 | **CasitaCal multi-person tag** | Soccer → Emma *and* Joe | iPad only. It's stored in the event's hidden `extendedProperties`. |
+| 2 | **Google event color** | Event colored *Peacock* → Joe | Any phone, the web, or the iPad |
+| 3 | **Name or nickname in the title** | "Emma soccer", "Dad's dentist" | Just write the title naturally |
+
+- Title matching is whole-word and ignores capitals and accents. "Joe" matches *"JOE's checkup"* but not *"Joey's party"*.
+- When you pick people on the iPad:
+  - **One person:** CasitaCal sets the event's Google color to that person's color, so phones show it the same way.
+  - **Several people:** it uses the first person's color and adds the hidden multi-person tag.
+
+### Privacy
+- Google sign-in tokens live in the iPad's **Keychain**.
+- Events are cached in the app's private storage and deleted when you sign out.
+- Nothing is sent anywhere except Google.
+- See the [privacy policy](https://joeguardiola.github.io/casitacal/privacy.html).
+
+---
+
+## Using CasitaCal
+
+### Getting around
+| Want to… | Do this |
+|---|---|
+| Switch view | **Day / Week / Month / Schedule** at the top right |
+| Move through time | **‹ ›** arrows. **Today** jumps back. |
+| Open a specific day | Tap a day header in Week, or any cell in Month |
+| See each person's day side by side | Day view → **By person** |
+| Hide someone's events | Tap their avatar in the header. Tap again to show them. |
+| See an event's details | Tap the event |
+
+### Adding an event
+1. Tap the orange **+** button at the bottom right.
+2. Type it like you'd say it:
+   - `Dentist Fri 3:30pm`
+   - `Soccer practice every Tuesday 4pm`
+   - `Grandma visiting Dec 20-23`
+3. Tap the avatars of the people it's for. Leave them all off for *Everyone*.
+4. Tap **Add**.
+
+For times, repeats, a location or notes, tap **More options** to open the full form. New events default to the day you're looking at.
+
+### Editing, reassigning, deleting
+Tap an event to open its details, then:
+- **Who's this for?** Tap avatars, then **Save**. The footer explains why an event is currently assigned the way it is.
+- **Edit event** changes the title, time, all-day, people, location or notes.
+- **Delete event** removes it from everyone's Google Calendar.
+
+For **repeating events**, CasitaCal asks whether you mean **Only this event** or **All repeats**.
+- Editing *all repeats* keeps the series' original start date and applies your new time-of-day and length.
+- To change the repeat *pattern* of an existing series, use Google Calendar.
+
+### Tagging from your phone
+In the Google Calendar app, open an event, tap **Edit**, choose a **color**, and pick that person's color:
+
+| Google color | Default person* |
+|---|---|
+| Peacock (blue) | Joe |
+| Grape (purple) | Mom |
+| Sage (green) | Kid 1 |
+| Tangerine (orange) | Kid 2 |
+
+\*Change names and colors in **Settings → Family**. Each color belongs to one person.
+
+Or just put their name in the title: *"Emma piano"*.
+
+### Settings
+- **Family:**
+  - Add, edit or remove people.
+  - Set each person's name, avatar, color, adult or kid, and **Also called** nicknames (e.g. `Dad, Papa`), separated by commas.
+  - Swipe a row to delete it. Tap **Edit** to reorder.
+- **Google Calendar:**
+  - See which account is signed in.
+  - Pick the **family calendar** (only calendars you can edit are listed).
+  - See the last sync time and sign out.
+- **Calendar:** choose whether the week starts on **Monday** (the default) or Sunday.
+
+### Locking the iPad to CasitaCal (Guided Access)
+iPadOS's Guided Access keeps the kitchen iPad inside the app:
+1. On the iPad, go to **Settings → Accessibility → Guided Access**, turn it on, and set a passcode.
+2. Open CasitaCal and **triple-click** the top (or Home) button, then tap **Start**.
+3. To exit, triple-click and enter the passcode.
+
+Also go to **Settings → Display & Brightness → Auto-Lock → Never** while the iPad is plugged in. CasitaCal also keeps the screen awake on its own.
+
+---
+
+## Setup from scratch
+
+### What you need
+- A Mac with **Xcode 26+**.
+- **[XcodeGen](https://github.com/yonaskolb/XcodeGen):** `brew install xcodegen`
+- An **Apple Developer account**:
+  - A free account works for testing, but those installs expire after 7 days.
+  - A paid account ($99/yr) lasts a year and is needed later for iCloud and weather.
+- A **Google account** with the shared family calendar.
+- An iPad on **iPadOS 18+**.
+
+### 1. Clone and configure
+```sh
+git clone git@github.com:joeguardiola/casitacal.git
+cd casitacal
+git config core.hooksPath .githooks              # turn on the secret-blocking pre-commit hook
+cp Config/Local.xcconfig.example Config/Local.xcconfig
+```
+
+`Config/Local.xcconfig` is **gitignored**. It holds your personal values:
+```
+DEVELOPMENT_TEAM = <your Apple team ID>
+GOOGLE_CLIENT_ID = <id>.apps.googleusercontent.com
+GOOGLE_REVERSED_CLIENT_ID = com.googleusercontent.apps.<id>
+```
+
+Find your team ID in Xcode → Settings → Accounts, or at developer.apple.com → Membership. The reversed client ID is the client ID with its parts reversed, as shown.
+
+### 2. Create the Google OAuth client
+In the [Google Cloud Console](https://console.cloud.google.com), signed in with the account that owns or can edit the family calendar:
+
+1. **Create a project**, e.g. `CasitaCal`.
+2. **APIs & Services → Library →** enable **Google Calendar API**.
+3. **Google Auth Platform → Get started.** Enter an app name and support email, set the audience to **External**, and enter a contact email.
+4. **Branding.** Google requires these before you can publish:
+   - **Application home page:** `https://joeguardiola.github.io/casitacal/`
+   - **Privacy policy:** `https://joeguardiola.github.io/casitacal/privacy.html`
+   - **Authorized domains:** `joeguardiola.github.io`
+   - **App logo:** leave empty. A logo triggers a slow brand review.
+5. **Data Access → Add or remove scopes.** Add `.../auth/calendar.events` and `.../auth/calendar.readonly`.
+6. **Audience → Publish app.** ⚠️ Don't skip this. In *Testing* mode, Google signs you out every 7 days. Published-but-unverified is fine for a family (fewer than 100 users).
+7. **Clients → Create client.** Type **iOS**, bundle ID `com.guardiola.casitacal`. Copy the client ID into `Config/Local.xcconfig`.
+
+The home page and privacy policy are served by GitHub Pages from [`docs/`](docs/), at Settings → Pages → `main` branch, `/docs` folder. If you fork the project, point these at your own Pages URL.
+
+### 3. Build and run in the simulator
+```sh
+xcodegen generate
+open CasitaCal.xcodeproj        # pick an iPad simulator and press ⌘R
+```
+
+### 4. Install on a real iPad
+1. Connect the iPad by cable, unlock it, and tap **Trust This Computer**.
+2. On the iPad, turn on **Settings → Privacy & Security → Developer Mode**. It restarts; confirm **Turn On**.
+3. Build and install:
+   ```sh
+   xcrun devicectl list devices      # find the iPad's identifier
+   xcodebuild -scheme CasitaCal -destination 'platform=iOS,name=<iPad name>' \
+     -derivedDataPath build -allowProvisioningUpdates build
+   xcrun devicectl device install app --device <iPad id> build/Build/Products/Debug-iphoneos/CasitaCal.app
+   xcrun devicectl device process launch --device <iPad id> com.guardiola.casitacal
+   ```
+   Or select the iPad in Xcode and press ⌘R.
+4. **Free Apple account only:** on the iPad, go to **Settings → General → VPN & Device Management → Developer App** and tap **Trust**.
+
+### 5. First launch
+1. Tap **Sign in with Google**.
+2. On **"Google hasn't verified this app"**, tap **Advanced → Go to CasitaCal (unsafe)**. That's expected for a personal app.
+3. Google shows name and email first. Tap **Continue**, then **tick both calendar permissions**.
+4. Pick your **family calendar**.
+5. In **Settings → Family**, set up names, colors and nicknames.
+
+---
+
+## Development
+
+### Project layout
+```
+project.yml                  XcodeGen spec (the .xcodeproj is generated and gitignored)
+Config/
+  Base.xcconfig              committed settings with empty placeholders
+  Local.xcconfig             your team ID and Google client ID (gitignored)
+CasitaCal/
+  App/                       app entry, root layout (iPad rail / iPhone tabs)
+  DesignSystem/              palette, avatars, cards
+  Models/                    Member, CalendarEvent, EventDraft, AppCalendar (week start)
+  Services/Google/           sign-in, Calendar REST client, DTOs, EventMapper (who's it for)
+  Features/Calendar/         EventStore (sync and cache), layout math, Day/Week/Month/Schedule, sheets
+  Features/Header/           clock and avatar filter bar
+  Features/Settings/         family, Google and calendar settings
+CasitaCalTests/              Swift Testing unit tests
+docs/                        GitHub Pages: home page and privacy policy
+.githooks/pre-commit         blocks commits containing credentials
+```
+
+### Tests
 ```sh
 xcodebuild test -scheme CasitaCal -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)'
 ```
 
-Inspired by [Skylight](https://www.skylightframe.com/) and [Kinboard](https://github.com/svenger87/kinboard).
+The tests cover:
+- event layout: overlaps, overnight events, all-day ranges, DST, month grid, Monday weeks
+- Google parsing and request bodies
+- "who's it for" mapping
+- series retiming
+- cache merging
+- member storage
+
+### Secrets policy
+This repo is **public**. Never commit credentials or personal IDs.
+- Personal values go only in `Config/Local.xcconfig`. `Info.plist` references them as build variables (`$(GOOGLE_CLIENT_ID)`), so the committed plist contains only variable names.
+- `.gitignore` covers `.env`, `GoogleService-Info.plist`, `client_secret*.json`, token files, `.p8`/`.p12`/`.pem` keys and provisioning profiles.
+- `.githooks/pre-commit` refuses commits that contain Google client IDs or tokens, API keys, private keys, GitHub tokens, Apple team IDs, or any of the files above. Turn it on once per clone with `git config core.hooksPath .githooks`. **Don't bypass it.**
+- At runtime, OAuth tokens live in the Keychain, never in files.
+
+---
+
+## Troubleshooting
+
+| Problem | Fix |
+|---|---|
+| **"Google hasn't verified this app"** | Expected. Tap **Advanced → Go to CasitaCal (unsafe)**. |
+| **"Access blocked"** with no *Advanced* link | The OAuth app is still in *Testing*. Go to Google Auth Platform → Audience → **Publish app**, or add yourself as a test user. |
+| **Consent screen only lists name, email and profile picture** | That's step one. Tap **Continue**, and the calendar permissions come next. Tick both. |
+| **"Calendar access wasn't granted"** | Sign out in Settings, sign in again, and tick both calendar checkboxes. |
+| **Signed out after a week** | The OAuth app is in Testing mode. Publish it (see setup step 2.6). |
+| **App won't open after a week** | Free Apple account installs expire after 7 days. Reinstall, or use a paid account. |
+| **App won't open: "untrusted developer"** | Settings → General → VPN & Device Management → **Trust**. |
+| **"Developer Mode disabled"** when installing | iPad Settings → Privacy & Security → **Developer Mode**. |
+| **Everything is gray (Everyone)** | Give people real names or nicknames in Settings, or tap events to assign them. See [Who's it for?](#whos-it-for). |
+| **Orange "Sync problem"** in the toolbar | Usually Wi-Fi. Cached events stay visible. Tap the badge to retry. |
+| **A phone change hasn't appeared** | Wait up to 60 seconds, or switch views to force a refresh. |
+
+---
+
+## Roadmap
+
+| Milestone | Status |
+|---|---|
+| 1. App shell, design system, family profiles | ✅ Done |
+| 2. Google sign-in, Day/Week/Month/Schedule views, "who's it for" | ✅ Done |
+| 3. Add, edit and delete events, quick add, repeats, offline cache | ✅ Done |
+| 4. Kiosk: weather (WeatherKit), night sleep mode, idle photo slideshow (iCloud Shared Album) | ⏳ Next |
+| 5. Chores, lists and meals synced via iCloud (CloudKit) | Planned |
+| 6. Sharing chores and lists across Apple IDs, iPhone companion layout, TestFlight | Planned |
+
+---
+
+Made for our casita. 🏡

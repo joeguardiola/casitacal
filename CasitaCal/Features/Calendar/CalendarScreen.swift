@@ -8,8 +8,11 @@ struct CalendarScreen: View {
 
     @AppStorage("calendar.mode") private var mode: CalendarMode = .week
     @AppStorage("calendar.dayByPerson") private var dayByPerson = true
+    // Observed so the views redraw when the week-start setting changes.
+    @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
     @State private var anchor = Date()
     @State private var selected: CalendarEvent?
+    @State private var isAdding = false
 
     private var range: DateInterval { CalendarRanges.range(for: mode, anchor: anchor) }
 
@@ -32,13 +35,36 @@ struct CalendarScreen: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         // Reload when the range or calendar changes, then every 60s while visible & active.
-        .task(id: TaskKey(range: range, calendarId: store.selectedCalendarId, active: scenePhase == .active)) {
-            guard scenePhase == .active else { return }
+        .task(id: TaskKey(range: range, calendarId: store.selectedCalendarId, active: scenePhase == .active && auth.isSignedIn)) {
+            guard scenePhase == .active, auth.isSignedIn else { return }
             await store.keepFresh(range)
         }
         .sheet(item: $selected) { e in
             EventDetailSheet(event: e)
         }
+        .sheet(isPresented: $isAdding) {
+            AddEventSheet(day: defaultAddDay)
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if auth.isSignedIn && store.selectedCalendarId != nil {
+                Button { isAdding = true } label: {
+                    Image(systemName: "plus")
+                        .font(.system(size: 30, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 76, height: 76)
+                        .background(Circle().fill(Palette.accent))
+                        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+                }
+                .padding(28)
+                .accessibilityLabel("Add event")
+            }
+        }
+    }
+
+    /// The day new events default to: the day being viewed, or today if it's on screen.
+    private var defaultAddDay: Date {
+        if mode == .day { return anchor }
+        return range.contains(Date()) ? Date() : range.start
     }
 
     private struct TaskKey: Equatable {
@@ -49,7 +75,8 @@ struct CalendarScreen: View {
 
     @ViewBuilder
     private var content: some View {
-        if !auth.isSignedIn || store.selectedCalendarId == nil {
+        // While Google sign-in is being restored (.unknown), show cached events instead of the sign-in card.
+        if auth.state == .signedOut || store.selectedCalendarId == nil {
             GoogleConnectCard()
                 .frame(maxWidth: 560)
                 .frame(maxHeight: .infinity)
@@ -90,7 +117,7 @@ struct CalendarScreen: View {
             Button("Today") { withAnimation(.snappy) { anchor = Date() } }
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                .disabled(range.contains(Date()) && mode != .day || Calendar.current.isDateInToday(anchor))
+                .disabled(mode == .day ? Calendar.app.isDateInToday(anchor) : range.contains(Date()))
 
             Spacer()
 
@@ -143,7 +170,7 @@ struct CalendarScreen: View {
     }
 
     private var title: String {
-        let cal = Calendar.current
+        let cal = Calendar.app
         switch mode {
         case .day:
             return anchor.formatted(.dateTime.weekday(.wide).month(.wide).day())

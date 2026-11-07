@@ -67,6 +67,39 @@ struct GoogleCalendarClient {
         )
     }
 
+    func event(calendarId: String, eventId: String) async throws -> GCalEvent {
+        try await get(path: "calendars/\(Self.encode(calendarId))/events/\(Self.encode(eventId))", query: [])
+    }
+
+    @discardableResult
+    func insertEvent(calendarId: String, _ body: GCalEventWrite) async throws -> GCalEvent {
+        try await send("POST", path: "calendars/\(Self.encode(calendarId))/events", body: try JSONEncoder().encode(body))
+    }
+
+    @discardableResult
+    func updateEvent(calendarId: String, eventId: String, _ body: GCalEventWrite) async throws -> GCalEvent {
+        try await send(
+            "PATCH",
+            path: "calendars/\(Self.encode(calendarId))/events/\(Self.encode(eventId))",
+            body: try JSONEncoder().encode(body)
+        )
+    }
+
+    /// Google parses natural language: "Dentist Tuesday 3pm".
+    func quickAdd(calendarId: String, text: String) async throws -> GCalEvent {
+        try await send(
+            "POST",
+            path: "calendars/\(Self.encode(calendarId))/events/quickAdd",
+            query: [URLQueryItem(name: "text", value: text)]
+        )
+    }
+
+    func deleteEvent(calendarId: String, eventId: String) async throws {
+        let _: Empty = try await send("DELETE", path: "calendars/\(Self.encode(calendarId))/events/\(Self.encode(eventId))")
+    }
+
+    private struct Empty: Decodable {}
+
     // MARK: - Plumbing
 
     private func get<T: Decodable>(path: String, query: [URLQueryItem]) async throws -> T {
@@ -90,6 +123,7 @@ struct GoogleCalendarClient {
         guard (200..<300).contains(status) else {
             throw GoogleCalendarError.http(status: status, message: Self.errorMessage(from: data))
         }
+        if T.self == Empty.self { return Empty() as! T } // 204 No Content
         return try JSONDecoder().decode(T.self, from: data)
     }
 

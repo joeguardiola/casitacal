@@ -1,7 +1,7 @@
 import Foundation
 
 /// App-side event, parsed from Google's wire format.
-struct CalendarEvent: Identifiable, Hashable, Sendable {
+struct CalendarEvent: Identifiable, Hashable, Codable, Sendable {
     var id: String
     var title: String
     var start: Date
