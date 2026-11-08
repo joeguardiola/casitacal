@@ -100,9 +100,25 @@ struct KioskTests {
     func at(_ h: Int, _ m: Int = 0) -> Date { cal.date(from: DateComponents(year: 2026, month: 11, day: 9, hour: h, minute: m))! }
     let night = (DateComponents(hour: 22, minute: 0), DateComponents(hour: 6, minute: 30))
 
-    func mode(idle: TimeInterval, at date: Date, slideshow: Int = 10, sleep: Bool = true, current: KioskController.Mode = .active) -> KioskController.Mode {
+    func mode(idle: TimeInterval, at date: Date, slideshow: Int = 10, sleep: Bool = true,
+              current: KioskController.Mode = .active, dark: Bool = false) -> KioskController.Mode {
         KioskController.mode(idle: idle, now: date, slideshowAfterMinutes: slideshow, sleepEnabled: sleep,
-                             sleepStart: night.0, sleepEnd: night.1, current: current, calendar: cal)
+                             sleepStart: night.0, sleepEnd: night.1, current: current, roomIsDark: dark, calendar: cal)
+    }
+
+    @Test func darkRoomShowsClockInsteadOfSlideshowDuringDay() {
+        #expect(mode(idle: 30, at: at(14), dark: true) == .active)
+        #expect(mode(idle: 3 * 60, at: at(14), dark: true) == .sleep)
+        #expect(mode(idle: 20 * 60, at: at(14), current: .slideshow, dark: true) == .sleep)
+        // Lights back on: slideshow again
+        #expect(mode(idle: 20 * 60, at: at(14), current: .sleep, dark: false) == .slideshow)
+    }
+
+    @Test func darknessHasHysteresis() {
+        #expect(KioskController.isDark(brightness: 0.10, threshold: 0.15, wasDark: false))
+        #expect(!KioskController.isDark(brightness: 0.18, threshold: 0.15, wasDark: false))
+        #expect(KioskController.isDark(brightness: 0.18, threshold: 0.15, wasDark: true))   // stays dark
+        #expect(!KioskController.isDark(brightness: 0.25, threshold: 0.15, wasDark: true))  // clearly light
     }
 
     @Test func overnightWindowCrossesMidnight() {

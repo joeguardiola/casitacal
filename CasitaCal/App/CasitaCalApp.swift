@@ -11,10 +11,10 @@ struct CasitaCalApp: App {
     @State private var weather = WeatherStore()
     @State private var photos = PhotoLibrary()
     @State private var kiosk = KioskController()
+    @State private var reminders = RemindersStore()
 
     init() {
         let persistence = Persistence.shared
-        persistence.seedListsIfNeeded()
         _persistence = State(initialValue: persistence)
         _members = State(initialValue: MemberStore(persistence: persistence))
         _chores = State(initialValue: ChoreStore(persistence: persistence))
@@ -35,6 +35,7 @@ struct CasitaCalApp: App {
                 .environment(weather)
                 .environment(photos)
                 .environment(kiosk)
+                .environment(reminders)
                 .onOpenURL { auth.handle(url: $0) }
                 .task {
                     await auth.restore()

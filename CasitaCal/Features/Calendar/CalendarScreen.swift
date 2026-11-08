@@ -22,6 +22,7 @@ struct CalendarScreen: View {
     // Observed so the views redraw when the week-start setting changes.
     @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
     @State private var anchor = Date()
+    @Environment(KioskController.self) private var kiosk
     @State private var selected: CalendarEvent?
     @State private var isAdding = false
 
@@ -43,6 +44,7 @@ struct CalendarScreen: View {
             content
         }
         .padding(isCompact ? 14 : 24)
+        .onChange(of: kiosk.wakeCount) { anchor = Date() } // back to today after the slideshow
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         // Reload when the range or calendar changes, then every 60s while visible & active.

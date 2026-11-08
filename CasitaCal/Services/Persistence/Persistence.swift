@@ -18,6 +18,9 @@ import UIKit
 @Observable
 final class Persistence {
     static let cloudKitContainerID = "iCloud.com.guardiola.casitacal"
+    /// Shared folder so the Share extension can save into the same database (paid team only).
+    static let appGroupID = "group.com.guardiola.casitacal"
+    static var isExtension: Bool { Bundle.main.bundleURL.pathExtension == "appex" }
     static let shared = Persistence()
 
     @ObservationIgnored let container: NSPersistentCloudKitContainer
@@ -31,6 +34,7 @@ final class Persistence {
     private(set) var lastShareError: String?
 
     @ObservationIgnored private var remoteObserver: NSObjectProtocol?
+    @ObservationIgnored private var historyToken: NSPersistentHistoryToken?
 
     static var cloudKitEnabled: Bool {
         Bundle.main.object(forInfoDictionaryKey: "CASITACAL_HAS_ICLOUD") as? String == "YES"
@@ -44,8 +48,7 @@ final class Persistence {
         usesCloudKit = cloudKit && !inMemory
         container = NSPersistentCloudKitContainer(name: "CasitaCal", managedObjectModel: CasitaModel.shared)
 
-        let dir = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        let dir = Self.storeDirectory()
 
         func describe(_ url: URL, scope: CKDatabase.Scope?) -> NSPersistentStoreDescription {
             let d = NSPersistentStoreDescription(url: url)
@@ -77,14 +80,74 @@ final class Persistence {
 
         context.automaticallyMergesChangesFromParent = true
         context.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
+        context.transactionAuthor = Self.isExtension ? Self.extensionAuthor : "app"
 
-        if usesCloudKit {
+        if !inMemory {
+            historyToken = try? coordinator.currentPersistentHistoryToken(fromStores: nil)
             remoteObserver = NotificationCenter.default.addObserver(
                 forName: .NSPersistentStoreRemoteChange, object: coordinator, queue: .main
             ) { [weak self] _ in
-                MainActor.assumeIsolated { self?.revision += 1 }
+                MainActor.assumeIsolated {
+                    self?.mergeChangesFromExtension()
+                    self?.revision += 1
+                }
             }
         }
+    }
+
+    static let extensionAuthor = "share-extension"
+
+    /// Waits (up to `timeout`) for the next successful iCloud upload. The Share extension uses this
+    /// so a recipe added from Safari reaches the kitchen iPad without opening CasitaCal first.
+    func waitForExport(timeout: Duration = .seconds(10)) async {
+        guard usesCloudKit else { return }
+        let start = Date()
+        await withTaskGroup(of: Void.self) { group in
+            group.addTask {
+                for await note in NotificationCenter.default.notifications(named: NSPersistentCloudKitContainer.eventChangedNotification) {
+                    guard let event = note.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
+                            as? NSPersistentCloudKitContainer.Event else { continue }
+                    if event.type == .export, let end = event.endDate, end > start { return }
+                }
+            }
+            group.addTask { try? await Task.sleep(for: timeout) }
+            await group.next()
+            group.cancelAll()
+        }
+    }
+
+    /// Saves made by the Share extension (another process) aren't merged automatically.
+    private func mergeChangesFromExtension() {
+        let request = NSPersistentHistoryChangeRequest.fetchHistory(after: historyToken)
+        guard let result = try? context.execute(request) as? NSPersistentHistoryResult,
+              let transactions = result.result as? [NSPersistentHistoryTransaction], !transactions.isEmpty
+        else { return }
+        for t in transactions where t.author == Self.extensionAuthor {
+            context.mergeChanges(fromContextDidSave: t.objectIDNotification())
+        }
+        historyToken = transactions.last?.token
+    }
+
+    /// The database folder: the App Group container when available (so the Share extension can
+    /// use it), otherwise Application Support. Moves an existing database over the first time.
+    static func storeDirectory() -> URL {
+        let fm = FileManager.default
+        let legacy = fm.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        guard let group = fm.containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else {
+            try? fm.createDirectory(at: legacy, withIntermediateDirectories: true)
+            return legacy
+        }
+        let dir = group.appendingPathComponent("Library/Application Support", isDirectory: true)
+        try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
+        // One-time move (app only; the database must not be open yet). Includes the SQLite
+        // sidecar files and Core Data's external-data folders so CloudKit sync state comes along.
+        if !isExtension, !fm.fileExists(atPath: dir.appendingPathComponent("Household.sqlite").path),
+           let items = try? fm.contentsOfDirectory(atPath: legacy.path) {
+            for name in items where name.hasPrefix("Household") || name.hasPrefix(".Household") || name == "ckAssetFiles" {
+                try? fm.moveItem(at: legacy.appendingPathComponent(name), to: dir.appendingPathComponent(name))
+            }
+        }
+        return dir
     }
 
     // MARK: - Household
@@ -136,23 +199,6 @@ final class Persistence {
         }
     }
 
-    /// Default lists so the Lists screen isn't empty on first launch (host device only).
-    func seedListsIfNeeded() {
-        guard isHouseholdHost else { return }
-        let request = NSFetchRequest<CDList>(entityName: "CDList")
-        guard (try? context.count(for: request)) == 0 else { return }
-        let h = household()
-        for (i, (emoji, title)) in [("🛒", "Groceries"), ("✅", "To-do")].enumerated() {
-            let l = insert(CDList.self)
-            l.id = UUID()
-            l.title = title
-            l.emoji = emoji
-            l.sortOrder = Int16(i)
-            l.createdAt = Date()
-            l.household = h
-        }
-        save()
-    }
 
     // MARK: - Sharing (needs iCloud)
 

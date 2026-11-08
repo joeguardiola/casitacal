@@ -231,6 +231,7 @@ struct KitchenDisplaySection: View {
     @Environment(KioskController.self) private var kiosk
     @Environment(PhotoLibrary.self) private var photos
     @Environment(WeatherStore.self) private var weather
+    @State private var cameraRefused = false
 
     var body: some View {
         @Bindable var kiosk = kiosk
@@ -240,7 +241,23 @@ struct KitchenDisplaySection: View {
                 ForEach([2, 5, 10, 15, 30], id: \.self) { Text("After \($0) min").tag($0) }
             }
             LabeledContent("Slideshow album", value: photos.selectedAlbum?.title ?? "Choose in Photos")
-            Toggle("Night mode", isOn: $kiosk.sleepEnabled)
+            Toggle(isOn: Binding(
+                get: { kiosk.presenceEnabled },
+                set: { on in
+                    if on { Task { cameraRefused = !(await kiosk.enablePresence()) } } else { kiosk.presenceEnabled = false }
+                }
+            )) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Wake when someone walks up")
+                    Text("Front camera looks for a face during the slideshow. Nothing is recorded or saved.")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            if cameraRefused {
+                Text("Camera access is off — turn it on in Settings → Apps → CasitaCal → Camera.")
+                    .font(.caption).foregroundStyle(.orange)
+            }
+            Toggle("Night clock at set hours", isOn: $kiosk.sleepEnabled)
             if kiosk.sleepEnabled {
                 DatePicker("Dim at", selection: timeBinding($kiosk.sleepStart), displayedComponents: .hourAndMinute)
                 DatePicker("Wake at", selection: timeBinding($kiosk.sleepEnd), displayedComponents: .hourAndMinute)
@@ -250,11 +267,22 @@ struct KitchenDisplaySection: View {
                     Image(systemName: "sun.max")
                 }
             }
+            Toggle("Night clock when the room is dark", isOn: $kiosk.darkRoomEnabled)
+            if kiosk.darkRoomEnabled {
+                LabeledContent("Light level now") {
+                    Text("\(Int((kiosk.screenBrightness * 100).rounded()))% · \(kiosk.roomIsDark ? "dark" : "light")")
+                        .monospacedDigit()
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Counts as dark below \(Int((kiosk.darkThreshold * 100).rounded()))%")
+                    Slider(value: $kiosk.darkThreshold, in: 0.03...0.5, step: 0.01)
+                }
+            }
             LabeledContent("Weather", value: weatherStatus)
         } header: {
             Text("Kitchen display")
         } footer: {
-            Text("At night the screen dims to a soft clock. A touch wakes it for 2 minutes. During the day, the slideshow starts after the iPad sits untouched; a touch brings the calendar back.")
+            Text("When the iPad sits untouched, it shows the photo slideshow — or the dark clock during your night hours or whenever the room is dark. A touch brings the calendar back (for 2 minutes at night). Dark-room detection reads the screen brightness, so keep Auto-Brightness on (Settings → Accessibility → Display & Text Size). Turn the lights off and watch “Light level now” to pick a good cut-off.")
         }
     }
 

@@ -25,6 +25,7 @@ struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass
     // `-startSection chores` (launch argument) opens a tab directly — handy for screenshots.
     @State private var section: AppSection = UserDefaults.standard.string(forKey: "startSection").flatMap(AppSection.init) ?? .calendar
+    @Environment(KioskController.self) private var kiosk
 
     var body: some View {
         if sizeClass == .compact {
@@ -47,6 +48,8 @@ struct RootView: View {
             }
             .background(Palette.canvas)
             .overlay { KioskOverlay() }
+            // Waking from the slideshow or night clock always lands on the calendar.
+            .onChange(of: kiosk.wakeCount) { section = .calendar }
         }
     }
 }
@@ -57,7 +60,7 @@ struct SectionContent: View {
 
     var body: some View {
         // Household screens wait for the household to arrive on phones (iCloud).
-        if [.chores, .lists, .meals].contains(section) && !persistence.hasHousehold {
+        if [.chores, .meals].contains(section) && !persistence.hasHousehold {
             WaitingForHouseholdView()
         } else {
             content

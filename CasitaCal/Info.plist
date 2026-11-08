@@ -35,10 +35,16 @@
 	<true/>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>CasitaCal can use the front camera to wake the kitchen display when someone walks up. Frames are checked on the iPad and never recorded or saved.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>CasitaCal uses the iPad's location to show local weather on the kitchen display.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>CasitaCal shows photos from the album you choose as a slideshow when the kitchen display is idle.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>CasitaCal shows and edits your Reminders lists (like a shared Shopping List) on the kitchen display.</string>
+	<key>NSRemindersUsageDescription</key>
+	<string>CasitaCal shows and edits your Reminders lists (like a shared Shopping List) on the kitchen display.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

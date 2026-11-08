@@ -1,69 +1,81 @@
-import CoreData
 import SwiftUI
 
-/// Shared lists (groceries, to-dos, packing…): lists on the left, items on the right.
+/// Lists backed by Apple Reminders: shared Reminders lists (e.g. "Shopping List")
+/// show up here, in the Reminders app, in Siri and on everyone's Apple Watch.
 struct ListsScreen: View {
-    @Environment(\.managedObjectContext) private var context
-    @FetchRequest(sortDescriptors: [SortDescriptor(\CDList.sortOrder), SortDescriptor(\CDList.createdAt)])
-    private var lists: FetchedResults<CDList>
-
-    @AppStorage("lists.selected") private var selectedID: String = ""
-    @State private var naming: NameDraft?
+    @Environment(RemindersStore.self) private var reminders
+    @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    struct NameDraft: Identifiable {
-        var id = UUID()
-        var list: CDList?
-        var title = ""
-        var emoji = "📝"
-    }
+    @AppStorage("lists.selectedReminderList") private var selectedID: String = ""
+    @State private var isCreating = false
+    @State private var isChoosing = false
 
-    private var selected: CDList? {
-        lists.first { $0.id?.uuidString == selectedID } ?? lists.first
+    private var selected: ReminderList? {
+        reminders.lists.first { $0.id == selectedID } ?? reminders.lists.first
     }
 
     var body: some View {
-        if sizeClass == .compact { phoneBody } else { padBody }
+        Group {
+            switch reminders.access {
+            case .notDetermined: AccessPrompt()
+            case .denied: AccessDenied()
+            case .granted:
+                if sizeClass == .compact { phoneBody } else { padBody }
+            }
+        }
+        .task { await reminders.reload() }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { Task { await reminders.reload() } }
+        }
+        .sheet(isPresented: $isCreating) {
+            NewListSheet { list in selectedID = list.id }
+        }
+        .sheet(isPresented: $isChoosing) { ChooseListsSheet() }
     }
 
-    /// Phone: list of lists → tap into one.
+    // MARK: Phone
+
     private var phoneBody: some View {
         NavigationStack {
             List {
-                ForEach(lists, id: \.objectID) { list in
+                ForEach(reminders.lists) { list in
                     NavigationLink {
-                        ListDetail(list: list, onRename: {
-                            naming = NameDraft(list: list, title: list.title ?? "", emoji: list.emoji ?? "📝")
-                        })
-                        .navigationBarTitleDisplayMode(.inline)
+                        ListDetail(list: list)
+                            .navigationBarTitleDisplayMode(.inline)
+                            .background(Palette.surface)
                     } label: {
-                        ListRow(list: list, isSelected: false)
+                        ListRow(list: list, remaining: reminders.remainingCount(in: list), isSelected: false)
                     }
                     .listRowSeparator(.hidden)
                     .listRowBackground(Color.clear)
                 }
+                if reminders.lists.isEmpty { noListsShown }
             }
             .listStyle(.plain)
             .navigationTitle("Lists")
             .toolbar {
-                Button("New list", systemImage: "plus") { naming = NameDraft() }
+                Menu {
+                    Button("New list", systemImage: "plus") { isCreating = true }
+                    Button("Choose lists…", systemImage: "checklist") { isChoosing = true }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
+                }
             }
             .background(Palette.canvas)
         }
-        .sheet(item: $naming) { draft in
-            ListNameSheet(draft: draft) { _ in }
-        }
     }
+
+    // MARK: iPad
 
     private var padBody: some View {
         HStack(alignment: .top, spacing: 18) {
             sidebar.frame(width: 280)
             Group {
                 if let selected {
-                    ListDetail(list: selected, onRename: { naming = NameDraft(list: selected, title: selected.title ?? "", emoji: selected.emoji ?? "📝") })
-                        .id(selected.objectID)
+                    ListDetail(list: selected).id(selected.id)
                 } else {
-                    ContentUnavailableView("No lists", systemImage: "list.bullet.rectangle", description: Text("Make one for groceries, to-dos or packing."))
+                    noListsShown
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -73,48 +85,64 @@ struct ListsScreen: View {
         .padding(24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
-        .sheet(item: $naming) { draft in
-            ListNameSheet(draft: draft) { saved in
-                selectedID = saved.id?.uuidString ?? selectedID
-            }
-        }
     }
 
     private var sidebar: some View {
         VStack(spacing: 10) {
             ScrollView {
                 VStack(spacing: 10) {
-                    ForEach(lists, id: \.objectID) { list in
-                        ListRow(list: list, isSelected: list == selected)
-                            .onTapGesture { selectedID = list.id?.uuidString ?? "" }
+                    ForEach(reminders.lists) { list in
+                        ListRow(list: list, remaining: reminders.remainingCount(in: list), isSelected: list == selected)
+                            .onTapGesture { selectedID = list.id }
                     }
                 }
             }
-            Button {
-                naming = NameDraft()
-            } label: {
-                Label("New list", systemImage: "plus")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
+            HStack(spacing: 10) {
+                Button { isCreating = true } label: {
+                    Label("New list", systemImage: "plus")
+                        .font(.headline)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                }
+                Button { isChoosing = true } label: {
+                    Image(systemName: "checklist")
+                        .font(.headline)
+                        .padding(.vertical, 12)
+                }
+                .accessibilityLabel("Choose lists")
             }
             .buttonStyle(.bordered)
+            Label("Synced with Apple Reminders", systemImage: "checklist.checked")
+                .font(.footnote)
+                .foregroundStyle(Palette.inkSecondary)
+        }
+    }
+
+    private var noListsShown: some View {
+        ContentUnavailableView {
+            Label("No lists shown", systemImage: "list.bullet.rectangle")
+        } description: {
+            Text("Pick which Reminders lists appear here — like your shared Shopping List.")
+        } actions: {
+            Button("Choose lists…") { isChoosing = true }.buttonStyle(.borderedProminent)
         }
     }
 }
 
-private struct ListRow: View {
-    @ObservedObject var list: CDList
-    let isSelected: Bool
+// MARK: - Rows & detail
 
-    private var remaining: Int {
-        (list.items as? Set<CDListItem> ?? []).filter { !$0.isDone }.count
-    }
+private struct ListRow: View {
+    let list: ReminderList
+    let remaining: Int
+    let isSelected: Bool
 
     var body: some View {
         HStack(spacing: 12) {
-            Text(list.emoji ?? "📝").font(.system(size: 30))
-            Text(list.title ?? "List").font(.title3.weight(.semibold)).lineLimit(1)
+            Text(list.emoji)
+                .font(.system(size: 26))
+                .frame(width: 44, height: 44)
+                .background(Circle().fill(isSelected ? .white.opacity(0.25) : list.color.opacity(0.18)))
+            Text(list.title).font(.title3.weight(.semibold)).lineLimit(1)
             Spacer()
             if remaining > 0 {
                 Text("\(remaining)")
@@ -123,7 +151,7 @@ private struct ListRow: View {
                     .background(Capsule().fill(isSelected ? .white.opacity(0.3) : Palette.sidebar))
             }
         }
-        .padding(14)
+        .padding(12)
         .foregroundStyle(isSelected ? .white : Palette.ink)
         .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(isSelected ? Palette.accent : Palette.surface))
         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(isSelected ? .clear : Palette.hairline))
@@ -132,40 +160,27 @@ private struct ListRow: View {
 }
 
 private struct ListDetail: View {
-    @ObservedObject var list: CDList
-    var onRename: () -> Void
+    let list: ReminderList
 
-    @Environment(\.managedObjectContext) private var context
-    @Environment(Persistence.self) private var persistence
-    @FetchRequest private var items: FetchedResults<CDListItem>
+    @Environment(RemindersStore.self) private var reminders
     @State private var newItem = ""
-    @State private var confirmDelete = false
+    @State private var confirmClear = false
     @FocusState private var addFocused: Bool
 
-    init(list: CDList, onRename: @escaping () -> Void) {
-        self.list = list
-        self.onRename = onRename
-        _items = FetchRequest(
-            sortDescriptors: [SortDescriptor(\CDListItem.createdAt)],
-            predicate: NSPredicate(format: "list == %@", list)
-        )
+    private var all: [ReminderItem] { reminders.items(in: list) }
+    private var open: [ReminderItem] {
+        all.filter { !$0.isCompleted }.sorted { ($0.creationDate ?? .distantPast) < ($1.creationDate ?? .distantPast) }
     }
-
-    private var open: [CDListItem] { items.filter { !$0.isDone } }
-    private var done: [CDListItem] { items.filter(\.isDone).sorted { ($0.completedAt ?? .distantPast) > ($1.completedAt ?? .distantPast) } }
+    private var done: [ReminderItem] {
+        all.filter(\.isCompleted).sorted { ($0.completionDate ?? .distantPast) > ($1.completionDate ?? .distantPast) }
+    }
 
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 12) {
-                Text(list.emoji ?? "📝").font(.system(size: 36))
-                Text(list.title ?? "List").font(.largeTitle.weight(.bold))
+                Text(list.emoji).font(.system(size: 36))
+                Text(list.title).font(.largeTitle.weight(.bold)).lineLimit(1).minimumScaleFactor(0.7)
                 Spacer()
-                Menu {
-                    Button("Rename", systemImage: "pencil", action: onRename)
-                    Button("Delete list", systemImage: "trash", role: .destructive) { confirmDelete = true }
-                } label: {
-                    Image(systemName: "ellipsis.circle").font(.title)
-                }
             }
             .padding(.horizontal, 24).padding(.top, 20).padding(.bottom, 12)
 
@@ -182,17 +197,17 @@ private struct ListDetail: View {
             .padding(.horizontal, 20)
 
             List {
-                ForEach(open, id: \.objectID) { item in ItemRow(item: item, toggle: { toggle(item) }) }
-                    .onDelete { $0.map { open[$0] }.forEach(delete) }
+                ForEach(open) { item in ItemRow(item: item) { toggle(item) } }
+                    .onDelete { offsets in reminders.delete(offsets.map { open[$0] }) }
                 if !done.isEmpty {
                     Section {
-                        ForEach(done, id: \.objectID) { item in ItemRow(item: item, toggle: { toggle(item) }) }
-                            .onDelete { $0.map { done[$0] }.forEach(delete) }
+                        ForEach(done) { item in ItemRow(item: item) { toggle(item) } }
+                            .onDelete { offsets in reminders.delete(offsets.map { done[$0] }) }
                     } header: {
                         HStack {
                             Text("Completed (\(done.count))")
                             Spacer()
-                            Button("Clear") { withAnimation { done.forEach(delete) } }
+                            Button("Clear") { confirmClear = true }
                                 .font(.subheadline.weight(.semibold))
                         }
                     }
@@ -201,60 +216,47 @@ private struct ListDetail: View {
             .listStyle(.plain)
             .scrollContentBackground(.hidden)
             .overlay {
-                if items.isEmpty {
-                    Text("Nothing on this list yet").foregroundStyle(Palette.inkSecondary)
+                if all.isEmpty {
+                    Text("Nothing on this list").foregroundStyle(Palette.inkSecondary)
                 }
             }
-        }
-        .confirmationDialog("Delete “\(list.title ?? "list")”?", isPresented: $confirmDelete, titleVisibility: .visible) {
-            Button("Delete list and its items", role: .destructive) {
-                context.delete(list)
-                try? context.save()
+            if let error = reminders.lastError {
+                Text(error).font(.footnote).foregroundStyle(.red).padding(8)
             }
+        }
+        .confirmationDialog("Clear \(done.count) completed item\(done.count == 1 ? "" : "s")?",
+                            isPresented: $confirmClear, titleVisibility: .visible) {
+            Button("Clear completed", role: .destructive) { withAnimation { reminders.delete(done) } }
+        } message: {
+            Text("They're removed from “\(list.title)” in Reminders for everyone sharing it.")
         }
     }
 
     private func add() {
-        let title = newItem.trimmingCharacters(in: .whitespaces)
-        guard !title.isEmpty else { return }
-        let item = persistence.insert(CDListItem.self)
-        item.id = UUID()
-        item.title = title
-        item.createdAt = Date()
-        item.list = list
-        try? context.save()
+        reminders.add(newItem, to: list)
         newItem = ""
         addFocused = true // keep typing the next item
     }
 
-    private func toggle(_ item: CDListItem) {
-        withAnimation(.snappy) {
-            item.isDone.toggle()
-            item.completedAt = item.isDone ? Date() : nil
-            try? context.save()
-        }
-    }
-
-    private func delete(_ item: CDListItem) {
-        context.delete(item)
-        try? context.save()
+    private func toggle(_ item: ReminderItem) {
+        withAnimation(.snappy) { reminders.toggle(item) }
     }
 }
 
 private struct ItemRow: View {
-    @ObservedObject var item: CDListItem
+    let item: ReminderItem
     var toggle: () -> Void
 
     var body: some View {
         Button(action: toggle) {
             HStack(spacing: 14) {
-                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                Image(systemName: item.isCompleted ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 28))
-                    .foregroundStyle(item.isDone ? Palette.accent : Palette.inkSecondary)
-                Text(item.title ?? "")
+                    .foregroundStyle(item.isCompleted ? Palette.accent : Palette.inkSecondary)
+                Text(item.title)
                     .font(.title3)
-                    .strikethrough(item.isDone)
-                    .foregroundStyle(item.isDone ? Palette.inkSecondary : Palette.ink)
+                    .strikethrough(item.isCompleted)
+                    .foregroundStyle(item.isCompleted ? Palette.inkSecondary : Palette.ink)
                 Spacer()
             }
             .padding(.vertical, 6)
@@ -266,58 +268,113 @@ private struct ItemRow: View {
     }
 }
 
-private struct ListNameSheet: View {
-    @State var draft: ListsScreen.NameDraft
-    var onSave: (CDList) -> Void
+// MARK: - Sheets
 
-    @Environment(\.managedObjectContext) private var context
+private struct ChooseListsSheet: View {
+    @Environment(RemindersStore.self) private var reminders
     @Environment(\.dismiss) private var dismiss
-    @Environment(Persistence.self) private var persistence
 
-    private let emojis = ["🛒", "✅", "📝", "🎁", "🧳", "🏠", "🔧", "🎄", "🎂", "📦", "💊", "🐾"]
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(reminders.allLists) { list in
+                        Toggle(isOn: Binding(
+                            get: { reminders.isShown(list) },
+                            set: { reminders.setShown(list, $0); Task { await reminders.reload() } }
+                        )) {
+                            HStack(spacing: 10) {
+                                Text(list.emoji)
+                                Text(list.title)
+                                Spacer()
+                                Circle().fill(list.color).frame(width: 10, height: 10)
+                            }
+                        }
+                    }
+                } footer: {
+                    Text("These are your Reminders lists, including ones shared with you. To share a list with someone, open it in the Reminders app and tap Share. This choice is just for this device.")
+                }
+            }
+            .navigationTitle("Lists to show")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.fontWeight(.semibold) }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+}
+
+private struct NewListSheet: View {
+    var onCreate: (ReminderList) -> Void
+
+    @Environment(RemindersStore.self) private var reminders
+    @Environment(\.dismiss) private var dismiss
+    @State private var title = ""
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     HStack {
-                        Text(draft.emoji).font(.system(size: 40))
-                        TextField("List name", text: $draft.title).font(.title2)
+                        Text(ReminderList.emoji(for: title)).font(.system(size: 36))
+                        TextField("List name", text: $title).font(.title2)
                     }
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 6), spacing: 8) {
-                        ForEach(emojis, id: \.self) { e in
-                            Text(e).font(.system(size: 30)).frame(width: 46, height: 46)
-                                .background(Circle().fill(draft.emoji == e ? Palette.accent.opacity(0.2) : .clear))
-                                .onTapGesture { draft.emoji = e }
-                        }
-                    }
+                } footer: {
+                    Text("Creates a new list in Apple Reminders. Share it from the Reminders app to sync it with family.")
                 }
             }
-            .navigationTitle(draft.list == nil ? "New list" : "Rename list")
+            .navigationTitle("New list")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let list = draft.list ?? {
-                            let l = persistence.insert(CDList.self)
-                            l.id = UUID()
-                            l.createdAt = Date()
-                            l.sortOrder = Int16.max
-                            l.household = persistence.household()
-                            return l
-                        }()
-                        list.title = draft.title.trimmingCharacters(in: .whitespaces)
-                        list.emoji = draft.emoji
-                        try? context.save()
-                        onSave(list)
+                    Button("Create") {
+                        if let list = reminders.createList(title: title) { onCreate(list) }
                         dismiss()
                     }
                     .fontWeight(.semibold)
-                    .disabled(draft.title.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty)
                 }
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+// MARK: - Permission screens
+
+private struct AccessPrompt: View {
+    @Environment(RemindersStore.self) private var reminders
+
+    var body: some View {
+        ContentUnavailableView {
+            Label("Use your Reminders lists", systemImage: "checklist")
+        } description: {
+            Text("CasitaCal shows and edits your Apple Reminders lists — including shared ones like a family Shopping List — so everything stays in sync with Reminders, Siri and everyone's phones.")
+        } actions: {
+            Button("Connect Reminders") { Task { await reminders.requestAccess() } }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.canvas)
+    }
+}
+
+private struct AccessDenied: View {
+    var body: some View {
+        ContentUnavailableView {
+            Label("Reminders access is off", systemImage: "checklist.unchecked")
+        } description: {
+            Text("Turn on Full Access for CasitaCal in Settings → Apps → CasitaCal → Reminders.")
+        } actions: {
+            Button("Open Settings") {
+                if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) }
+            }
+            .buttonStyle(.borderedProminent)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Palette.canvas)
     }
 }

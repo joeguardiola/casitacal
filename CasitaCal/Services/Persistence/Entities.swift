@@ -14,6 +14,7 @@ final class CDHousehold: NSManagedObject {
     @NSManaged var chores: NSSet?
     @NSManaged var lists: NSSet?
     @NSManaged var meals: NSSet?
+    @NSManaged var recipes: NSSet?
 }
 
 @objc(CDMember)
@@ -91,6 +92,33 @@ final class CDMeal: NSManagedObject {
     @NSManaged var title: String?
     @NSManaged var notes: String?
     @NSManaged var household: CDHousehold?
+    @NSManaged var recipe: CDRecipe?
+}
+
+/// A saved recipe (the recipe box). Imported from a link, or just a name + photo.
+@objc(CDRecipe)
+final class CDRecipe: NSManagedObject {
+    @NSManaged var id: UUID?
+    @NSManaged var title: String?
+    @NSManaged var sourceURL: String?
+    @NSManaged var siteName: String?
+    @NSManaged var summary: String?
+    /// Downscaled JPEG, stored with the recipe so it works offline and syncs (CloudKit asset).
+    @NSManaged var imageData: Data?
+    @NSManaged var imageURL: String?
+    /// One ingredient per line.
+    @NSManaged var ingredients: String?
+    /// One step per line; lines starting with "## " are section headings.
+    @NSManaged var steps: String?
+    @NSManaged var prepMinutes: Int32
+    @NSManaged var cookMinutes: Int32
+    @NSManaged var totalMinutes: Int32
+    @NSManaged var servings: String?
+    @NSManaged var notes: String?
+    @NSManaged var createdAt: Date?
+    @NSManaged var lastPlannedAt: Date?
+    @NSManaged var household: CDHousehold?
+    @NSManaged var meals: NSSet?
 }
 
 /// The Core Data model, built in code (keeps the schema reviewable in diffs).
@@ -111,6 +139,7 @@ enum CasitaModel {
             a.attributeType = type
             a.isOptional = value == nil
             a.defaultValue = value
+            if type == .binaryDataAttributeType { a.allowsExternalBinaryDataStorage = true }
             return a
         }
         func link(_ from: NSEntityDescription, _ name: String, to: NSEntityDescription, toMany: Bool,
@@ -168,15 +197,28 @@ enum CasitaModel {
             attr("title", .stringAttributeType), attr("notes", .stringAttributeType),
         ])
 
+        let recipe = entity(CDRecipe.self, [
+            attr("id", .UUIDAttributeType), attr("title", .stringAttributeType), attr("sourceURL", .stringAttributeType),
+            attr("siteName", .stringAttributeType), attr("summary", .stringAttributeType),
+            attr("imageData", .binaryDataAttributeType), attr("imageURL", .stringAttributeType),
+            attr("ingredients", .stringAttributeType), attr("steps", .stringAttributeType),
+            attr("prepMinutes", .integer32AttributeType, default: 0), attr("cookMinutes", .integer32AttributeType, default: 0),
+            attr("totalMinutes", .integer32AttributeType, default: 0), attr("servings", .stringAttributeType),
+            attr("notes", .stringAttributeType), attr("createdAt", .dateAttributeType), attr("lastPlannedAt", .dateAttributeType),
+        ])
+
         link(household, "members", to: member, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         link(household, "chores", to: chore, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         link(household, "lists", to: list, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         link(household, "meals", to: meal, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         link(chore, "completions", to: completion, toMany: true, inverse: "chore", inverseToMany: false, cascade: true)
         link(list, "items", to: item, toMany: true, inverse: "list", inverseToMany: false, cascade: true)
+        link(household, "recipes", to: recipe, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
+        // Deleting a recipe keeps the planned meals (they just lose the link).
+        link(recipe, "meals", to: meal, toMany: true, inverse: "recipe", inverseToMany: false, cascade: false)
 
         let model = NSManagedObjectModel()
-        model.entities = [household, member, chore, completion, list, item, meal]
+        model.entities = [household, member, chore, completion, list, item, meal, recipe]
         return model
     }
 }

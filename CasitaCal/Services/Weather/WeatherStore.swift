@@ -39,6 +39,9 @@ final class WeatherStore {
     private(set) var status: Status = .idle
     private(set) var attribution: WeatherAttribution?
     private(set) var lastUpdated: Date?
+    /// Where the weather is for, e.g. "Oak Creek, WI".
+    private(set) var placeName: String? = UserDefaults.standard.string(forKey: "weather.placeName")
+    private var placeLocation: CLLocation?
 
     private let location = OneShotLocation()
     private var lastFetch: Date?
@@ -73,6 +76,7 @@ final class WeatherStore {
             status = .unavailable("Couldn't find the iPad's location.")
             return
         }
+        await updatePlaceName(for: here)
         do {
             let (current, daily) = try await WeatherService.shared.weather(for: here, including: .current, .daily)
             let today = daily.forecast.first
@@ -94,6 +98,19 @@ final class WeatherStore {
         } catch {
             status = .unavailable(Self.explain(error))
         }
+    }
+
+    /// Reverse-geocodes the town once, and again only if the iPad moves more than ~2 km.
+    private func updatePlaceName(for here: CLLocation) async {
+        if let placeLocation, placeName != nil, here.distance(from: placeLocation) < 2_000 { return }
+        guard let placemark = try? await CLGeocoder().reverseGeocodeLocation(here).first else { return }
+        let town = placemark.locality ?? placemark.subAdministrativeArea
+        let region = placemark.isoCountryCode == "US" ? placemark.administrativeArea : placemark.country
+        let name = [town, region].compactMap { $0 }.joined(separator: ", ")
+        guard !name.isEmpty else { return }
+        placeName = name
+        placeLocation = here
+        UserDefaults.standard.set(name, forKey: "weather.placeName")
     }
 
     /// Ask for location permission (shows the system prompt once).

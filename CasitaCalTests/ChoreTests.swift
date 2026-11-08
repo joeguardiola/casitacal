@@ -79,11 +79,4 @@ struct ChoreStoreTests {
         #expect(store.chores.isEmpty)
     }
 
-    @Test func seedsDefaultListsOnce() {
-        let p = Persistence(inMemory: true)
-        p.seedListsIfNeeded()
-        p.seedListsIfNeeded()
-        let count = (try? p.context.count(for: .init(entityName: "CDList"))) ?? 0
-        #expect(count == 2)
-    }
 }

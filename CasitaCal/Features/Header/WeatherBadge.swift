@@ -25,12 +25,19 @@ struct WeatherBadge: View {
                                     .font(style == .large ? .title3 : .subheadline)
                                     .opacity(0.75)
                             }
+                            if let place = weather.placeName {
+                                Label(place, systemImage: "location.fill")
+                                    .labelStyle(PlaceLabelStyle())
+                                    .font(style == .large ? .headline : .caption.weight(.medium))
+                                    .lineLimit(1)
+                                    .opacity(0.65)
+                            }
                         }
                     }
                 }
                 .buttonStyle(.plain)
                 .popover(isPresented: $showForecast) { ForecastPopover() }
-                .accessibilityLabel("\(s.condition), \(Self.temp(s.temperature))")
+                .accessibilityLabel("\(s.condition), \(Self.temp(s.temperature))\(weather.placeName.map { " in \($0)" } ?? "")")
             } else if style == .header {
                 Button { showForecast = true } label: {
                     Label("--°", systemImage: "cloud.sun")
@@ -49,6 +56,16 @@ struct WeatherBadge: View {
     }
 }
 
+/// Small location arrow tucked against the town name.
+private struct PlaceLabelStyle: LabelStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        HStack(spacing: 3) {
+            configuration.icon.imageScale(.small)
+            configuration.title
+        }
+    }
+}
+
 /// 5-day forecast + Apple Weather attribution (required by WeatherKit).
 struct ForecastPopover: View {
     @Environment(WeatherStore.self) private var weather
@@ -58,6 +75,11 @@ struct ForecastPopover: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let s = weather.snapshot {
+                if let place = weather.placeName {
+                    Label(place, systemImage: "location.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
                 Text(s.condition).font(.title2.weight(.bold))
                 if let p = s.precipitationChance, p > 0 {
                     Label("\(Int(p * 100))% chance of rain today", systemImage: "umbrella")

@@ -29,6 +29,7 @@ targets:
     dependencies:
       - package: GoogleSignIn
         product: GoogleSignIn
+      - target: CasitaCalShare
     info:
       path: CasitaCal/Info.plist
       properties:
@@ -41,6 +42,9 @@ targets:
         UIBackgroundModes: [remote-notification] # CloudKit change pushes
         CKSharingSupported: true                 # accept household invite links
         NSLocationWhenInUseUsageDescription: CasitaCal uses the iPad's location to show local weather on the kitchen display.
+        NSRemindersFullAccessUsageDescription: CasitaCal shows and edits your Reminders lists (like a shared Shopping List) on the kitchen display.
+        NSRemindersUsageDescription: CasitaCal shows and edits your Reminders lists (like a shared Shopping List) on the kitchen display.
+        NSCameraUsageDescription: CasitaCal can use the front camera to wake the kitchen display when someone walks up. Frames are checked on the iPad and never recorded or saved.
         NSPhotoLibraryUsageDescription: CasitaCal shows photos from the album you choose as a slideshow when the kitchen display is idle.
         CFBundleURLTypes:
           - CFBundleURLSchemes:
@@ -58,6 +62,42 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: "UIInterfaceOrientationPortrait"
         INFOPLIST_KEY_UIRequiresFullScreen: YES
+  # Safari → Share → CasitaCal (save a recipe link to the plan).
+  CasitaCalShare:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: CasitaCalShare
+        excludes:
+          - CasitaCalShare.entitlements
+          - Info.plist
+      # Shared with the app: the household database and the recipe reader.
+      - CasitaCal/Services/Persistence/Entities.swift
+      - CasitaCal/Services/Persistence/Persistence.swift
+      - CasitaCal/Services/Recipes/RecipeParser.swift
+      - CasitaCal/Services/Recipes/RecipeImporter.swift
+      - CasitaCal/Models/AppCalendar.swift
+      - CasitaCal/Models/MealSlot.swift
+    info:
+      path: CasitaCalShare/Info.plist
+      properties:
+        CFBundleDisplayName: CasitaCal
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        CASITACAL_HAS_ICLOUD: $(CASITACAL_HAS_ICLOUD)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.share-services
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).ShareViewController
+          NSExtensionAttributes:
+            NSExtensionActivationRule:
+              NSExtensionActivationSupportsWebURLWithMaxCount: 1
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.guardiola.casitacal.share
+        CODE_SIGN_ENTITLEMENTS: $(CASITACAL_SHARE_ENTITLEMENTS)
+        TARGETED_DEVICE_FAMILY: "1,2"
+        SKIP_INSTALL: YES
+        APPLICATION_EXTENSION_API_ONLY: YES
   CasitaCalTests:
     type: bundle.unit-test
     platform: iOS

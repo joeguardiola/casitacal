@@ -1,19 +1,6 @@
 import CoreData
+import PhotosUI
 import SwiftUI
-
-enum MealSlot: String, CaseIterable, Identifiable {
-    case breakfast, lunch, dinner, snack
-    var id: String { rawValue }
-    var label: String { rawValue.capitalized }
-    var emoji: String {
-        switch self {
-        case .breakfast: "🥞"
-        case .lunch: "🥪"
-        case .dinner: "🍝"
-        case .snack: "🍎"
-        }
-    }
-}
 
 /// Weekly meal plan: days across, breakfast/lunch/dinner/snack down.
 struct MealsScreen: View {
@@ -23,12 +10,25 @@ struct MealsScreen: View {
     @AppStorage("meals.showSnack") private var showSnack = false
     @State private var anchor = Date()
     @State private var editing: MealCell?
+    @State private var viewing: Viewing?
+    @State private var showingRecipeBox = false
     @Environment(\.horizontalSizeClass) private var sizeClass
 
     struct MealCell: Identifiable, Hashable {
         var day: String
         var slot: MealSlot
         var id: String { "\(day)-\(slot.rawValue)" }
+    }
+
+    struct Viewing: Identifiable {
+        var cell: MealCell
+        var recipe: CDRecipe
+        var id: String { cell.id }
+    }
+
+    /// Planned meals with a recipe open the recipe; everything else opens the editor.
+    private func open(_ cell: MealCell, _ meal: CDMeal?) {
+        if let recipe = meal?.recipe { viewing = Viewing(cell: cell, recipe: recipe) } else { editing = cell }
     }
 
     private var days: [Date] { CalendarRanges.days(in: CalendarRanges.range(for: .week, anchor: anchor)) }
@@ -60,6 +60,14 @@ struct MealsScreen: View {
                         .buttonStyle(.bordered).controlSize(.large)
                 }
                 Spacer()
+                Button { showingRecipeBox = true } label: {
+                    if sizeClass == .compact {
+                        Image(systemName: "book.closed")
+                    } else {
+                        Label("Recipes", systemImage: "book.closed")
+                    }
+                }
+                .buttonStyle(.bordered).controlSize(.large)
                 Menu {
                     Button("This week") { withAnimation(.snappy) { anchor = Date() } }
                     Toggle("Breakfast", isOn: $showBreakfast)
@@ -75,15 +83,25 @@ struct MealsScreen: View {
                 .buttonStyle(.bordered).controlSize(.large)
             }
             if sizeClass == .compact {
-                MealList(days: days, slots: slots) { editing = $0 }
+                MealList(days: days, slots: slots, onOpen: open)
             } else {
-                MealGrid(days: days, slots: slots) { editing = $0 }
+                MealGrid(days: days, slots: slots, onOpen: open)
             }
         }
         .padding(sizeClass == .compact ? 14 : 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         .sheet(item: $editing) { MealEditor(cell: $0) }
+        .sheet(item: $viewing) { v in
+            RecipeView(recipe: v.recipe) {
+                viewing = nil
+                Task { @MainActor in
+                    try? await Task.sleep(for: .milliseconds(450))
+                    editing = v.cell
+                }
+            }
+        }
+        .sheet(isPresented: $showingRecipeBox) { RecipeBox() }
     }
 
     private var title: String {
@@ -99,14 +117,14 @@ struct MealsScreen: View {
 private struct MealGrid: View {
     let days: [Date]
     let slots: [MealSlot]
-    var onEdit: (MealsScreen.MealCell) -> Void
+    var onOpen: (MealsScreen.MealCell, CDMeal?) -> Void
 
     @FetchRequest private var meals: FetchedResults<CDMeal>
 
-    init(days: [Date], slots: [MealSlot], onEdit: @escaping (MealsScreen.MealCell) -> Void) {
+    init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void) {
         self.days = days
         self.slots = slots
-        self.onEdit = onEdit
+        self.onOpen = onOpen
         _meals = FetchRequest(sortDescriptors: [], predicate: NSPredicate(format: "day IN %@", days.map { DayKey.from($0) }))
     }
 
@@ -114,7 +132,7 @@ private struct MealGrid: View {
         let byCell = Dictionary(meals.map { ("\($0.day ?? "")-\($0.slot ?? "")", $0) }, uniquingKeysWith: { a, _ in a })
         Grid(horizontalSpacing: 10, verticalSpacing: 10) {
             GridRow {
-                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]).frame(width: 96, height: 1)
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]).frame(width: 84, height: 1)
                 ForEach(days, id: \.self) { day in
                     let isToday = Calendar.app.isDateInToday(day)
                     VStack(spacing: 2) {
@@ -129,48 +147,84 @@ private struct MealGrid: View {
                 }
             }
             ForEach(slots) { slot in
+                // Dinner gets the big photo tiles; other meals stay compact.
+                let isBig = slot == .dinner
                 GridRow {
                     VStack(spacing: 4) {
-                        Text(slot.emoji).font(.system(size: 30))
+                        Text(slot.emoji).font(.system(size: isBig ? 30 : 22))
                         Text(slot.label).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.inkSecondary)
                     }
-                    .frame(width: 96)
+                    .frame(width: 84)
                     ForEach(days, id: \.self) { day in
                         let key = DayKey.from(day)
                         let meal = byCell["\(key)-\(slot.rawValue)"]
-                        Button { onEdit(.init(day: key, slot: slot)) } label: {
-                            Group {
-                                if let title = meal?.title, !title.isEmpty {
-                                    Text(title)
-                                        .font(.headline)
-                                        .foregroundStyle(Palette.ink)
-                                        .multilineTextAlignment(.center)
-                                        .lineLimit(4)
-                                        .minimumScaleFactor(0.8)
-                                } else {
-                                    Image(systemName: "plus").font(.title3).foregroundStyle(Palette.hairline)
-                                }
-                            }
-                            .padding(10)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                            .background(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .fill(meal?.title?.isEmpty == false ? Palette.accent.opacity(0.12) : Palette.surface)
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                                    .strokeBorder(Calendar.app.isDateInToday(day) ? Palette.accent.opacity(0.5) : Palette.hairline,
-                                                  lineWidth: Calendar.app.isDateInToday(day) ? 2 : 1)
-                            )
-                            .contentShape(Rectangle())
+                        Button { onOpen(.init(day: key, slot: slot), meal) } label: {
+                            MealTile(meal: meal, isBig: isBig, isToday: Calendar.app.isDateInToday(day))
                         }
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(slot.label), \(day.formatted(.dateTime.weekday(.wide))): \(meal?.title ?? "empty")")
                     }
                 }
-                .frame(maxHeight: .infinity)
+                .frame(height: isBig ? nil : 72)
+                .frame(maxHeight: isBig ? .infinity : nil)
             }
         }
+    }
+}
+
+private struct MealTile: View {
+    let meal: CDMeal?
+    let isBig: Bool
+    let isToday: Bool
+
+    private var title: String? { meal?.title.flatMap { $0.isEmpty ? nil : $0 } }
+    private var hasPhoto: Bool { meal?.recipe?.imageData != nil }
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
+
+    var body: some View {
+        Group {
+            if let title {
+                if isBig && hasPhoto {
+                    ZStack(alignment: .bottomLeading) {
+                        Color.clear.overlay { RecipePhoto(recipe: meal?.recipe) }
+                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
+                        Text(title)
+                            .font(.headline)
+                            .foregroundStyle(.white)
+                            .lineLimit(3)
+                            .padding(10)
+                    }
+                } else if hasPhoto {
+                    HStack(spacing: 8) {
+                        RecipePhoto(recipe: meal?.recipe)
+                            .frame(width: 44, height: 44)
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink).lineLimit(2)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(8)
+                    .background(Palette.accent.opacity(0.12))
+                } else {
+                    Text(title)
+                        .font(isBig ? .headline : .subheadline.weight(.semibold))
+                        .foregroundStyle(Palette.ink)
+                        .multilineTextAlignment(.center)
+                        .lineLimit(isBig ? 4 : 2)
+                        .minimumScaleFactor(0.8)
+                        .padding(10)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(Palette.accent.opacity(0.12))
+                }
+            } else {
+                Image(systemName: "plus").font(.title3).foregroundStyle(Palette.hairline)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Palette.surface)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(isToday ? Palette.accent.opacity(0.6) : Palette.hairline, lineWidth: isToday ? 2 : 1))
+        .contentShape(shape)
     }
 }
 
@@ -178,14 +232,14 @@ private struct MealGrid: View {
 private struct MealList: View {
     let days: [Date]
     let slots: [MealSlot]
-    var onEdit: (MealsScreen.MealCell) -> Void
+    var onOpen: (MealsScreen.MealCell, CDMeal?) -> Void
 
     @FetchRequest private var meals: FetchedResults<CDMeal>
 
-    init(days: [Date], slots: [MealSlot], onEdit: @escaping (MealsScreen.MealCell) -> Void) {
+    init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void) {
         self.days = days
         self.slots = slots
-        self.onEdit = onEdit
+        self.onOpen = onOpen
         _meals = FetchRequest(sortDescriptors: [], predicate: NSPredicate(format: "day IN %@", days.map { DayKey.from($0) }))
     }
 
@@ -201,14 +255,20 @@ private struct MealList: View {
                             .font(.headline)
                             .foregroundStyle(isToday ? Palette.accent : Palette.ink)
                         ForEach(slots) { slot in
-                            Button { onEdit(.init(day: key, slot: slot)) } label: {
+                            let meal = byCell["\(key)-\(slot.rawValue)"]
+                            Button { onOpen(.init(day: key, slot: slot), meal) } label: {
                                 HStack(spacing: 10) {
                                     Text(slot.emoji)
                                     Text(slot.label).foregroundStyle(Palette.inkSecondary).frame(width: 80, alignment: .leading)
-                                    Text(byCell["\(key)-\(slot.rawValue)"]?.title ?? "—")
+                                    Text(meal?.title ?? "—")
                                         .foregroundStyle(Palette.ink)
                                         .lineLimit(1)
                                     Spacer()
+                                    if meal?.recipe?.imageData != nil {
+                                        RecipePhoto(recipe: meal?.recipe)
+                                            .frame(width: 40, height: 40)
+                                            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                    }
                                 }
                                 .padding(.vertical, 4)
                                 .contentShape(Rectangle())
@@ -233,10 +293,17 @@ private struct MealEditor: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
     @Environment(Persistence.self) private var persistence
+    @FetchRequest(sortDescriptors: [SortDescriptor(\CDRecipe.lastPlannedAt, order: .reverse), SortDescriptor(\CDRecipe.createdAt, order: .reverse)])
+    private var savedRecipes: FetchedResults<CDRecipe>
+
     @State private var title = ""
     @State private var notes = ""
     @State private var existing: CDMeal?
     @State private var recent: [String] = []
+    @State private var chosen: CDRecipe?
+    @State private var link = LinkImport()
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoData: Data?
     @FocusState private var focused: Bool
 
     var body: some View {
@@ -244,12 +311,28 @@ private struct MealEditor: View {
             Form {
                 Section {
                     TextField("e.g. Tacos", text: $title).font(.title2).focused($focused)
-                    TextField("Notes (recipe link, who's cooking…)", text: $notes, axis: .vertical)
+                }
+                recipeSection
+                if !savedRecipes.isEmpty && chosen == nil && link.result == nil {
+                    Section("From your recipes") {
+                        ScrollView(.horizontal) {
+                            HStack(spacing: 12) {
+                                ForEach(savedRecipes.prefix(20), id: \.objectID) { r in
+                                    Button { pick(r) } label: { RecipeChip(recipe: r) }.buttonStyle(.plain)
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        }
+                        .scrollIndicators(.hidden)
+                    }
                 }
                 if !recent.isEmpty {
                     Section("Recent") {
                         FlowChips(items: recent) { title = $0 }
                     }
+                }
+                Section {
+                    TextField("Notes (who's cooking, sides…)", text: $notes, axis: .vertical)
                 }
                 if existing != nil {
                     Section {
@@ -265,11 +348,65 @@ private struct MealEditor: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save", action: save).fontWeight(.semibold) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save", action: save)
+                        .fontWeight(.semibold)
+                        .disabled(link.state == .loading)
+                }
             }
             .onAppear(perform: load)
+            .onChange(of: link.result?.recipe) { _, new in
+                if let new, title.trimmingCharacters(in: .whitespaces).isEmpty { title = new.title }
+            }
+            .onChange(of: photoItem) { _, item in
+                Task {
+                    guard let data = try? await item?.loadTransferable(type: Data.self) else { return }
+                    photoData = RecipeImporter.downscaledJPEG(data)
+                }
+            }
         }
-        .presentationDetents([.medium, .large])
+        .presentationDetents([.large])
+    }
+
+    @ViewBuilder
+    private var recipeSection: some View {
+        Section {
+            if let chosen {
+                HStack(spacing: 12) {
+                    RecipeChip(recipe: chosen, isSelected: true)
+                    Spacer()
+                    Button("Remove", role: .destructive) { self.chosen = nil }
+                }
+            } else if let result = link.result {
+                ParsedRecipeCard(recipe: result.recipe, image: result.image)
+                Button("Remove recipe", role: .destructive) { link.clear() }
+            } else {
+                LinkImportField(link: link)
+                PhotosPicker(selection: $photoItem, matching: .images) {
+                    if let photoData, let ui = UIImage(data: photoData) {
+                        HStack {
+                            Image(uiImage: ui).resizable().scaledToFill().frame(width: 56, height: 56)
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                            Text("Change photo")
+                        }
+                    } else {
+                        Label("Or add a photo", systemImage: "photo")
+                    }
+                }
+            }
+        } header: {
+            Text("Recipe")
+        } footer: {
+            if chosen == nil && link.result == nil {
+                Text("Paste a link from any recipe site — the photo, ingredients and steps come in automatically.")
+            }
+        }
+    }
+
+    private func pick(_ recipe: CDRecipe) {
+        chosen = recipe
+        title = recipe.title ?? title
+        link.clear()
     }
 
     private func load() {
@@ -278,10 +415,11 @@ private struct MealEditor: View {
         existing = try? context.fetch(request).first
         title = existing?.title ?? ""
         notes = existing?.notes ?? ""
+        chosen = existing?.recipe
 
-        // Recent meals for this slot, most-used first, for one-tap reuse.
+        // Recent meals for this slot, most-used first, for one-tap reuse (ones without a recipe).
         let all = NSFetchRequest<CDMeal>(entityName: "CDMeal")
-        all.predicate = NSPredicate(format: "slot == %@", cell.slot.rawValue)
+        all.predicate = NSPredicate(format: "slot == %@ AND recipe == nil", cell.slot.rawValue)
         let counts = ((try? context.fetch(all)) ?? []).compactMap(\.title).filter { !$0.isEmpty }
             .reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
         recent = counts.sorted { ($1.value, $0.key) < ($0.value, $1.key) }.prefix(12).map(\.key)
@@ -289,8 +427,33 @@ private struct MealEditor: View {
     }
 
     private func save() {
+        var recipe = chosen
+        if let result = link.result {
+            recipe = RecipeImporter.save(result.recipe, image: result.image, persistence: persistence)
+        } else if recipe == nil, let photoData {
+            // A meal with just a photo still goes in the recipe box (handy to plan again).
+            let r = persistence.insert(CDRecipe.self)
+            r.id = UUID()
+            r.createdAt = Date()
+            r.household = persistence.household()
+            r.title = title.trimmingCharacters(in: .whitespaces)
+            r.imageData = photoData
+            recipe = r
+        } else if recipe == nil, let url = RecipeImporter.firstLink(in: link.text) {
+            // Site blocked reading: keep the link anyway.
+            let r = persistence.insert(CDRecipe.self)
+            r.id = UUID()
+            r.createdAt = Date()
+            r.household = persistence.household()
+            r.title = title.trimmingCharacters(in: .whitespaces)
+            r.sourceURL = url.absoluteString
+            r.siteName = url.host()
+            recipe = r
+        }
+
         let trimmed = title.trimmingCharacters(in: .whitespaces)
-        if trimmed.isEmpty {
+        let finalTitle = trimmed.isEmpty ? (recipe?.title ?? "") : trimmed
+        if finalTitle.isEmpty {
             if let existing { context.delete(existing) }
         } else {
             let meal = existing ?? {
@@ -301,8 +464,13 @@ private struct MealEditor: View {
                 m.household = persistence.household()
                 return m
             }()
-            meal.title = trimmed
+            meal.title = finalTitle
             meal.notes = notes
+            meal.recipe = recipe
+            if let recipe {
+                if (recipe.title ?? "").isEmpty { recipe.title = finalTitle }
+                recipe.lastPlannedAt = Date()
+            }
         }
         try? context.save()
         dismiss()

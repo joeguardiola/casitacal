@@ -52,14 +52,20 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - Set a **time of day** (morning, afternoon or evening) and **stars**. Kids earn ⭐️ per chore, with weekly totals under each name.
 - **"Anyone" chores** get their own column, so whoever does it checks it off.
 
-### Lists
-- **Shared lists** for groceries, to-dos, packing or anything else. Groceries and To-do come built in.
+### Lists (Apple Reminders)
+- **Your real Reminders lists.** CasitaCal shows and edits them, including lists shared with other Apple IDs, like a family Shopping List.
+- They stay in sync with the Reminders app, Siri ("add milk to my Shopping List"), Apple Watch and everyone's phones.
+- **Choose lists** decides which lists appear on each device. On first run it shows lists with "shopping" or "grocery" in the name.
 - Quick add keeps the keyboard up so you can rattle off a whole grocery run.
-- Tap to check off. Completed items drop to the bottom, and **Clear** removes them.
+- Tap to check off. Completed items drop to the bottom, and **Clear** removes them for everyone sharing the list.
 
-### Meals
-- **A weekly meal plan** with days across and breakfast, lunch, dinner and snacks down. Show only the meals you plan.
-- Tap a slot to fill it in. **Recent** suggestions make repeat meals ("Taco Tuesday") one tap.
+### Meals and recipes
+- **A weekly meal plan** with days across and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. Show only the meals you plan.
+- **Paste a recipe link** and CasitaCal pulls out the photo, ingredients, steps, times and servings. It reads the schema.org recipe data most recipe sites publish, so you skip the life story and ads. Pages without recipe data still give a title and photo.
+- **Share from Safari:** on iPhone or iPad, tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
+- **Recipe box:** every recipe you add is saved, searchable by name or ingredient, and one tap to plan again.
+- **Cooking view:** big text, ingredients you can tick off, numbered steps you tap to keep your place, and your own notes ("double the garlic").
+- Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap.
 
 ### Family
 - **Profiles:** each person gets a name, an emoji avatar and a color. Colors match Google Calendar's 11 event colors.
@@ -69,7 +75,10 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 ### Kitchen display
 - **Header:** big clock and date, plus current weather and today's high and low. Tap the weather for a 5-day forecast.
 - **Photo slideshow when idle:** after a few minutes untouched, the iPad becomes a photo frame. It shows an album you choose (ideally an iCloud Shared Album the whole family adds to), with the time, weather and next event on top.
-- **Night mode:** at night the screen dims to a soft clock. A touch wakes it for 2 minutes.
+- **Night clock:** during your night hours, the screen dims to a soft clock. It also shows any time the room is dark, using the screen brightness that Auto-Brightness picks. A touch wakes it for 2 minutes.
+- **Walk-up wake (optional):** during the slideshow, the front camera looks for a face and wakes the display when someone walks up. Frames are checked on the iPad and never recorded or saved.
+- Waking always returns to the **calendar, showing today**.
+- **Weather** shows the town it's for (e.g. "Oak Creek, WI").
 - The screen never auto-locks while the app is open.
 - Works in landscape and portrait.
 - A warm, soft palette with large touch targets.
@@ -378,8 +387,10 @@ This repo is **public**. Never commit credentials or personal IDs.
 | 2. Google sign-in, Day/Week/Month/Schedule views, "who's it for" | ✅ Done |
 | 3. Add, edit and delete events, quick add, repeats, offline cache | ✅ Done |
 | 4. Kiosk: weather (WeatherKit), night mode, idle photo slideshow (iCloud Shared Album) | ✅ Done (weather needs the paid team) |
-| 5. Chores, lists and meals (stored on the iPad; iCloud sync switches on with the paid team) | ✅ Done |
-| 6. iCloud sync and sharing across Apple IDs, iPhone companion layout, TestFlight | ⏳ Next (needs the paid team) |
+| 5. Chores, lists and meals | ✅ Done |
+| 6. iCloud sync, sharing across Apple IDs, iPhone companion layout | ✅ Done (sync verified iPad ↔ iPhone) |
+| 7. Reminders-backed lists, recipe import + Share from Safari, dark-room night clock, walk-up wake | ✅ Done |
+| 8. Distribution to family (TestFlight) | ⏳ Next |
 
 ---
 
