@@ -41,6 +41,7 @@ targets:
         CASITACAL_HAS_ICLOUD: $(CASITACAL_HAS_ICLOUD)
         UIBackgroundModes: [remote-notification] # CloudKit change pushes
         CKSharingSupported: true                 # accept household invite links
+        ITSAppUsesNonExemptEncryption: false     # only standard HTTPS; skips the export-compliance question
         NSLocationWhenInUseUsageDescription: CasitaCal uses the iPad's location to show local weather on the kitchen display.
         NSRemindersFullAccessUsageDescription: CasitaCal shows and edits your Reminders lists (like a shared Shopping List) on the kitchen display.
         NSRemindersUsageDescription: CasitaCal shows and edits your Reminders lists (like a shared Shopping List) on the kitchen display.

@@ -97,6 +97,28 @@ final class Persistence {
 
     static let extensionAuthor = "share-extension"
 
+    /// Creates every record type in the CloudKit *development* schema (using a throwaway store),
+    /// so the whole schema can be deployed to production before TestFlight/App Store builds.
+    /// Run with the launch argument `-initializeCloudKitSchema YES` on a development build.
+    static func initializeCloudKitSchema() -> String {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("SchemaInit-\(UUID().uuidString).sqlite")
+        let container = NSPersistentCloudKitContainer(name: "CasitaCalSchema", managedObjectModel: CasitaModel.shared)
+        let d = NSPersistentStoreDescription(url: url)
+        d.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+        d.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+        d.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: cloudKitContainerID)
+        container.persistentStoreDescriptions = [d]
+        var loadError: Error?
+        container.loadPersistentStores { _, error in loadError = error }
+        if let loadError { return "SCHEMA INIT FAILED (load): \(loadError)" }
+        do {
+            try container.initializeCloudKitSchema(options: [])
+            return "SCHEMA INIT OK: \(CasitaModel.shared.entities.compactMap(\.name).joined(separator: ", "))"
+        } catch {
+            return "SCHEMA INIT FAILED: \(error)"
+        }
+    }
+
     /// Waits (up to `timeout`) for the next successful iCloud upload. The Share extension uses this
     /// so a recipe added from Safari reaches the kitchen iPad without opening CasitaCal first.
     func waitForExport(timeout: Duration = .seconds(10)) async {

@@ -35,6 +35,8 @@
 	<true/>
 	<key>GIDClientID</key>
 	<string>$(GOOGLE_CLIENT_ID)</string>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>NSCameraUsageDescription</key>
 	<string>CasitaCal can use the front camera to wake the kitchen display when someone walks up. Frames are checked on the iPad and never recorded or saved.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
