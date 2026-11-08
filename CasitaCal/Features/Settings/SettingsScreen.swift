@@ -304,7 +304,7 @@ struct KitchenDisplaySection: View {
     }
 }
 
-/// "0.7.0 (202611080004)" — marketing version and build number (the upload time).
+/// "0.2.0 (202611080004)" — marketing version and build number (the upload time).
 enum AppVersion {
     static var display: String {
         let info = Bundle.main.infoDictionary ?? [:]

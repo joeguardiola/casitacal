@@ -1,9 +1,10 @@
 #!/bin/zsh
 # Version, archive and upload CasitaCal to App Store Connect (TestFlight), then tag the release.
 #
-#   scripts/testflight.sh          # next patch version (0.7.0 -> 0.7.1), or the current one if never released
-#   scripts/testflight.sh minor    # new features  (0.7.3 -> 0.8.0)
-#   scripts/testflight.sh major    # big milestone (0.9.2 -> 1.0.0)
+# Semantic versioning (MAJOR.MINOR.PATCH; 0.x = still in development):
+#   scripts/testflight.sh          # PATCH, bug fixes only   (0.2.0 -> 0.2.1); uses the current version if never released
+#   scripts/testflight.sh minor    # MINOR, new features      (0.2.1 -> 0.3.0)
+#   scripts/testflight.sh major    # MAJOR, breaking/1.0      (0.9.2 -> 1.0.0)
 #
 # Signing uses the team in Config/Local.xcconfig (gitignored) and the Apple ID signed in to Xcode.
 # Add a "## <version>" section to CHANGELOG.md before running (the script warns if it's missing).
