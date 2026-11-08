@@ -49,7 +49,7 @@ struct SettingsScreen: View {
                 }
 
                 Section("About") {
-                    LabeledContent("Version", value: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "—")
+                    LabeledContent("Version", value: AppVersion.display)
                 }
             }
             .navigationTitle("Settings")
@@ -301,5 +301,15 @@ struct KitchenDisplaySection: View {
             get: { Calendar.current.date(from: comps.wrappedValue) ?? .now },
             set: { comps.wrappedValue = Calendar.current.dateComponents([.hour, .minute], from: $0) }
         )
+    }
+}
+
+/// "0.7.0 (202611080004)" — marketing version and build number (the upload time).
+enum AppVersion {
+    static var display: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        let version = info["CFBundleShortVersionString"] as? String ?? "—"
+        let build = info["CFBundleVersion"] as? String ?? "?"
+        return "\(version) (\(build))"
     }
 }
