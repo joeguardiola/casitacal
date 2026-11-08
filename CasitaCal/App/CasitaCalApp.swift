@@ -1,6 +1,5 @@
 import SwiftUI
 
-@main
 struct CasitaCalApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var persistence: Persistence
@@ -14,11 +13,6 @@ struct CasitaCalApp: App {
     @State private var reminders = RemindersStore()
 
     init() {
-        #if DEBUG
-        if UserDefaults.standard.bool(forKey: "initializeCloudKitSchema") {
-            print(Persistence.initializeCloudKitSchema())
-        }
-        #endif
         let persistence = Persistence.shared
         _persistence = State(initialValue: persistence)
         _members = State(initialValue: MemberStore(persistence: persistence))

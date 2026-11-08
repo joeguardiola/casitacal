@@ -180,6 +180,38 @@ final class Persistence {
         }
     }
 
+    /// Creates (then deletes) one household share in the *development* environment so the
+    /// system `cloudkit.share` record type exists there and gets deployed to production.
+    /// Without it, production rejects invites: "Cannot create new type cloudkit.share".
+    static func registerShareSchema() async -> String {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("ShareInit-\(UUID().uuidString).sqlite")
+        let container = NSPersistentCloudKitContainer(name: "CasitaCalShareSchema", managedObjectModel: CasitaModel.shared)
+        let d = NSPersistentStoreDescription(url: url)
+        d.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+        d.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
+        d.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(containerIdentifier: cloudKitContainerID)
+        container.persistentStoreDescriptions = [d]
+        var loadError: Error?
+        container.loadPersistentStores { _, error in loadError = error }
+        if let loadError { return "SHARE SCHEMA FAILED (load): \(loadError)" }
+        guard let store = container.persistentStoreCoordinator.persistentStores.first else { return "SHARE SCHEMA FAILED: no store" }
+        do {
+            let ctx = container.viewContext
+            let h = CDHousehold(context: ctx)
+            h.id = UUID()
+            h.name = "Schema setup (safe to delete)"
+            h.createdAt = Date()
+            try ctx.save()
+            try await Task.sleep(for: .seconds(3)) // let sync finish starting up
+            let (_, share, _) = try await container.share([h], to: nil)
+            let link = share.url?.absoluteString ?? "no url"
+            try? await container.purgeObjectsAndRecordsInZone(with: share.recordID.zoneID, in: store)
+            return "SHARE SCHEMA OK (\(link.prefix(40))…) — cloudkit.share now exists in Development"
+        } catch {
+            return "SHARE SCHEMA FAILED: \(describe(error))"
+        }
+    }
+
     /// Waits (up to `timeout`) for the next successful iCloud upload. The Share extension uses this
     /// so a recipe added from Safari reaches the kitchen iPad without opening CasitaCal first.
     func waitForExport(timeout: Duration = .seconds(10)) async {
