@@ -65,7 +65,7 @@ grep -vE "Progress [0-9]+%" "$LOG" | grep -E "error|Upload|EXPORT" || true
 if ! grep -q "EXPORT SUCCEEDED" "$LOG"; then git checkout -- project.yml CHANGELOG.md; echo "Upload failed (see $LOG)"; exit 1; fi
 
 git add project.yml CHANGELOG.md
-git commit -q -m "Release $VERSION (build $BUILD_NUMBER) to TestFlight"
+git diff --cached --quiet || git commit -q -m "Release $VERSION (build $BUILD_NUMBER) to TestFlight"
 git tag -a "v$VERSION" -m "CasitaCal $VERSION (build $BUILD_NUMBER) — TestFlight"
 git push -q --follow-tags
 echo "Done: $VERSION ($BUILD_NUMBER) uploaded, tagged v$VERSION and pushed. In TestFlight after processing (~5–15 min)."

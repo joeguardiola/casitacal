@@ -3,7 +3,7 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
-## 0.2.0
+## 0.2.0 (build 202611080025)
 - Lists use Apple Reminders, including shared lists (e.g. a family Shopping List)
 - Recipes: paste a link or Share → CasitaCal from Safari to import photo, ingredients and steps; recipe box; cooking view; photo tiles for dinner
 - Night clock also when the room is dark; optional walk-up wake (front camera); waking returns to Calendar/today
