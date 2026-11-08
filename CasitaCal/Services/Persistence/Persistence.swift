@@ -33,6 +33,17 @@ final class Persistence {
     private(set) var revision = 0
     private(set) var lastShareError: String?
 
+    /// Latest iCloud sync activity, for the status line in Settings.
+    struct SyncEvent: Equatable {
+        var kind: String          // "Setup", "Download", "Upload"
+        var date: Date
+        var succeeded: Bool
+        var error: String?
+        var store: String         // "private" / "shared"
+    }
+    private(set) var syncEvents: [String: SyncEvent] = [:]
+    @ObservationIgnored private var eventObserver: NSObjectProtocol?
+
     @ObservationIgnored private var remoteObserver: NSObjectProtocol?
     @ObservationIgnored private var historyToken: NSPersistentHistoryToken?
 
@@ -82,6 +93,29 @@ final class Persistence {
         context.mergePolicy = NSMergePolicy(merge: .mergeByPropertyObjectTrumpMergePolicyType)
         context.transactionAuthor = Self.isExtension ? Self.extensionAuthor : "app"
 
+        if usesCloudKit {
+            eventObserver = NotificationCenter.default.addObserver(
+                forName: NSPersistentCloudKitContainer.eventChangedNotification, object: container, queue: .main
+            ) { [weak self] note in
+                guard let event = note.userInfo?[NSPersistentCloudKitContainer.eventNotificationUserInfoKey]
+                        as? NSPersistentCloudKitContainer.Event, let end = event.endDate else { return }
+                let kind = switch event.type {
+                case .setup: "Setup"
+                case .import: "Download"
+                case .export: "Upload"
+                @unknown default: "Sync"
+                }
+                let storeName = event.storeIdentifier
+                let errorText = event.error.map(Self.describe)
+                let succeeded = event.succeeded
+                MainActor.assumeIsolated {
+                    guard let self else { return }
+                    let scope = self.sharedStore?.identifier == storeName ? "shared" : "private"
+                    self.syncEvents["\(kind)-\(scope)"] = SyncEvent(kind: kind, date: end, succeeded: succeeded, error: errorText, store: scope)
+                }
+            }
+        }
+
         if !inMemory {
             historyToken = try? coordinator.currentPersistentHistoryToken(fromStores: nil)
             remoteObserver = NotificationCenter.default.addObserver(
@@ -96,6 +130,33 @@ final class Persistence {
     }
 
     static let extensionAuthor = "share-extension"
+
+    /// Full error text including underlying errors (Core Data wraps the real CloudKit reason).
+    nonisolated static func describe(_ error: Error) -> String {
+        var parts: [String] = []
+        var current: NSError? = error as NSError
+        var depth = 0
+        while let e = current, depth < 4 {
+            var line = "\(e.domain) \(e.code): \(e.localizedDescription)"
+            if let reason = e.localizedFailureReason, !line.contains(reason) { line += " — \(reason)" }
+            if let partial = e.userInfo["CKPartialErrors"] as? [AnyHashable: Error], let first = partial.first {
+                line += " [partial: \((first.value as NSError).domain) \((first.value as NSError).code) \(first.value.localizedDescription)]"
+            }
+            if let detail = e.userInfo["NSDebugDescription"] as? String { line += " (\(detail))" }
+            parts.append(line)
+            current = e.userInfo[NSUnderlyingErrorKey] as? NSError
+            depth += 1
+        }
+        return parts.joined(separator: "\n↳ ")
+    }
+
+    /// Most recent failure, if the latest event of that kind failed.
+    var syncProblem: SyncEvent? {
+        syncEvents.values.filter { !$0.succeeded }.max { $0.date < $1.date }
+    }
+    var lastSuccessfulSync: Date? {
+        syncEvents.values.filter(\.succeeded).map(\.date).max()
+    }
 
     /// Creates every record type in the CloudKit *development* schema (using a throwaway store),
     /// so the whole schema can be deployed to production before TestFlight/App Store builds.
@@ -237,17 +298,62 @@ final class Persistence {
 
     /// The household's share, creating it the first time. Everything related to the
     /// household (members, chores, lists, meals) moves into the shared zone with it.
+    enum ShareError: LocalizedError {
+        case noLink
+        var errorDescription: String? { "iCloud didn't return an invite link for the household. Try again in a minute." }
+    }
+
+    /// The household's share, guaranteed to exist in iCloud with a working invite link.
+    ///
+    /// A share can end up created locally but never uploaded (e.g. if sync was still starting
+    /// up); handing that to the share sheet gives "a link couldn't be created". So: wait for
+    /// sync setup, create or repair the share, and save the share record directly if it still
+    /// has no link.
     func shareForHousehold() async throws -> CKShare {
-        if let existing = existingShare() { return existing }
+        await waitForSetup()
         let h = household()
         save()
-        let (_, share, _) = try await container.share([h], to: nil)
-        share[CKShare.SystemFieldKey.title] = "CasitaCal · \(h.name ?? "Our casita")"
+
+        // Don't edit the share after creating it: an unsaved change makes Messages
+        // fail with "Unable to start collaboration".
+        var share: CKShare
+        if let existing = existingShare() {
+            share = existing.url == nil ? try await container.share([h], to: existing).1 : existing
+        } else {
+            share = try await container.share([h], to: nil).1
+        }
+
+        if share.url == nil {
+            let result = try await cloudKitContainer.privateCloudDatabase.modifyRecords(saving: [share], deleting: [])
+            switch result.saveResults[share.recordID] {
+            case let .success(saved as CKShare)?:
+                share = saved
+                persistUpdatedShare(saved)
+            case let .failure(error)?:
+                throw error
+            default:
+                break
+            }
+        }
+        guard share.url != nil else { throw ShareError.noLink }
         revision += 1
         return share
     }
 
+    /// Waits (briefly) until iCloud sync has finished starting up for the private store.
+    func waitForSetup(timeout: Duration = .seconds(10)) async {
+        guard usesCloudKit, syncEvents["Setup-private"]?.succeeded != true else { return }
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+        while clock.now < deadline, syncEvents["Setup-private"]?.succeeded != true {
+            try? await Task.sleep(for: .milliseconds(300))
+        }
+    }
+
     var cloudKitContainer: CKContainer { CKContainer(identifier: Self.cloudKitContainerID) }
+
+    /// Re-reads share participants after an invite goes out (Settings shows "Invited"/"Joined").
+    func refreshAfterSharing() { revision += 1 }
 
     func persistUpdatedShare(_ share: CKShare) {
         guard let privateStore else { return }

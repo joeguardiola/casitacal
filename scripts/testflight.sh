@@ -28,6 +28,6 @@ xcodebuild archive -scheme CasitaCal -configuration Release \
 
 echo "Uploading to App Store Connect…"
 xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportOptionsPlist "$OPTIONS" \
-  -exportPath build/export -allowProvisioningUpdates | grep -E "error|Upload|EXPORT" || true
+  -exportPath build/export -allowProvisioningUpdates | grep -vE "Progress [0-9]+%" | grep -E "error|Upload|EXPORT" || true
 rm -f "$OPTIONS"
 echo "Done: build $BUILD_NUMBER. It shows up in TestFlight after Apple finishes processing (~5–15 min)."

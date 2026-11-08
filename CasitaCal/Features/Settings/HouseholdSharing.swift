@@ -41,8 +41,9 @@ struct HouseholdSharingSection: View {
                 .disabled(isPreparing)
             }
             if let error = error ?? persistence.lastShareError {
-                Text(error).font(.footnote).foregroundStyle(.red)
+                Text(error).font(.footnote).foregroundStyle(.red).textSelection(.enabled)
             }
+            if persistence.usesCloudKit { SyncStatusRows() }
         } header: {
             Text("Family sharing")
         } footer: {
@@ -57,9 +58,40 @@ struct HouseholdSharingSection: View {
             defer { isPreparing = false }
             do {
                 let share = try await persistence.shareForHousehold()
-                coordinator.present(share: share, persistence: persistence)
+                let hasOthers = share.participants.contains { $0.role != .owner }
+                if hasOthers {
+                    coordinator.present(share: share, persistence: persistence) // manage people
+                } else {
+                    coordinator.presentInvite(share: share, persistence: persistence) // Messages / Mail invite
+                }
             } catch {
-                self.error = "Couldn't start sharing: \(error.localizedDescription)"
+                self.error = "Couldn't start sharing:\n\(Persistence.describe(error))"
+            }
+        }
+    }
+}
+
+/// "iCloud: synced 2 min ago" — and the full error when something's wrong.
+private struct SyncStatusRows: View {
+    @Environment(Persistence.self) private var persistence
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { _ in
+            if let problem = persistence.syncProblem {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("iCloud \(problem.kind.lowercased()) failed (\(problem.store)) · \(problem.date.formatted(.relative(presentation: .named)))",
+                          systemImage: "exclamationmark.icloud")
+                        .foregroundStyle(.orange)
+                    if let text = problem.error {
+                        Text(text).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                    }
+                }
+            } else if let last = persistence.lastSuccessfulSync {
+                Label("iCloud synced \(last.formatted(.relative(presentation: .named)))", systemImage: "checkmark.icloud")
+                    .foregroundStyle(.secondary)
+            } else {
+                Label("iCloud: waiting for first sync…", systemImage: "icloud")
+                    .foregroundStyle(.secondary)
             }
         }
     }
@@ -79,6 +111,27 @@ final class ShareCoordinator: NSObject, @preconcurrency UICloudSharingController
         controller.popoverPresentationController?.sourceView = top.view
         controller.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
         top.present(controller, animated: true)
+    }
+
+    /// First invite: the system share sheet with a CloudKit share item. This is the path
+    /// Messages collaboration expects (UICloudSharingController is for managing people afterwards).
+    func presentInvite(share: CKShare, persistence: Persistence) {
+        self.persistence = persistence
+        let provider = NSItemProvider()
+        let options = CKAllowedSharingOptions(
+            allowedParticipantPermissionOptions: .readWrite,
+            allowedParticipantAccessOptions: .specifiedRecipientsOnly
+        )
+        provider.registerCKShare(share, container: persistence.cloudKitContainer, allowedSharingOptions: options)
+        let sheet = UIActivityViewController(activityItems: [provider], applicationActivities: nil)
+        sheet.completionWithItemsHandler = { [weak self] _, completed, _, _ in
+            if completed { self?.persistence?.refreshAfterSharing() }
+        }
+        guard let top = Self.topViewController() else { return }
+        sheet.popoverPresentationController?.sourceView = top.view
+        sheet.popoverPresentationController?.sourceRect = CGRect(x: top.view.bounds.midX, y: top.view.bounds.midY, width: 1, height: 1)
+        sheet.popoverPresentationController?.permittedArrowDirections = []
+        top.present(sheet, animated: true)
     }
 
     func itemTitle(for csc: UICloudSharingController) -> String? { "CasitaCal household" }
