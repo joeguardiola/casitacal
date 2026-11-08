@@ -10,6 +10,9 @@ The version shows in the app under **Settings → About**.
 - Weather shows the town name
 - Family invites: the invite link is verified in iCloud before sharing; Settings shows iCloud sync status and full errors
 - Version and build number in Settings → About
+- Recipes: **Add to list…** sends the ingredients you tick to a Reminders list (never automatic)
+- Tonight's dinner (or tomorrow's, after 8 PM) in the header and on the slideshow
+- Settings → About shows when the TestFlight build expires; the header warns 14 days ahead
 
 ## 0.1.0 (builds 202611072340, 202611080001, 202611080004)
 - First TestFlight builds: calendar, chores, meals, kiosk mode, iCloud sync across your devices

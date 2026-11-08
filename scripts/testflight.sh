@@ -25,7 +25,14 @@ case "${1:-patch}" in
 esac
 BUILD_NUMBER=$(date +%Y%m%d%H%M)   # always increasing, no bookkeeping
 
-grep -q "^## $VERSION" CHANGELOG.md || echo "⚠️  CHANGELOG.md has no '## $VERSION' section yet."
+if ! grep -q "^## $VERSION" CHANGELOG.md; then
+  if [[ -n "${MAINTENANCE:-}" ]]; then
+    # Keep-alive upload: note it in the changelog (included in the release commit).
+    perl -0pi -e "s/\n## /\n## $VERSION\n- Maintenance rebuild so TestFlight never expires (no changes)\n\n## /" CHANGELOG.md
+  else
+    echo "⚠️  CHANGELOG.md has no '## $VERSION' section yet."
+  fi
+fi
 sed -i '' -E "s/^( *MARKETING_VERSION: )\"[0-9.]+\"/\1\"$VERSION\"/" project.yml
 
 ARCHIVE=build/CasitaCal.xcarchive
@@ -47,7 +54,7 @@ echo "Archiving $VERSION ($BUILD_NUMBER)…"
 xcodebuild archive -scheme CasitaCal -configuration Release \
   -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" \
   -allowProvisioningUpdates CURRENT_PROJECT_VERSION="$BUILD_NUMBER" | grep -E "error:|\*\* ARCHIVE" || true
-if [[ ! -d "$ARCHIVE" ]]; then git checkout -- project.yml; echo "Archive failed"; exit 1; fi
+if [[ ! -d "$ARCHIVE" ]]; then git checkout -- project.yml CHANGELOG.md; echo "Archive failed"; exit 1; fi
 
 echo "Uploading to App Store Connect…"
 LOG=$(mktemp)
@@ -55,9 +62,9 @@ xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportOptionsPlist "$OPTIONS"
   -exportPath build/export -allowProvisioningUpdates > "$LOG" 2>&1 || true
 rm -f "$OPTIONS"
 grep -vE "Progress [0-9]+%" "$LOG" | grep -E "error|Upload|EXPORT" || true
-if ! grep -q "EXPORT SUCCEEDED" "$LOG"; then git checkout -- project.yml; echo "Upload failed (see $LOG)"; exit 1; fi
+if ! grep -q "EXPORT SUCCEEDED" "$LOG"; then git checkout -- project.yml CHANGELOG.md; echo "Upload failed (see $LOG)"; exit 1; fi
 
-git add project.yml
+git add project.yml CHANGELOG.md
 git commit -q -m "Release $VERSION (build $BUILD_NUMBER) to TestFlight"
 git tag -a "v$VERSION" -m "CasitaCal $VERSION (build $BUILD_NUMBER) — TestFlight"
 git push -q --follow-tags

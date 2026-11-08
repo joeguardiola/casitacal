@@ -50,6 +50,9 @@ struct SettingsScreen: View {
 
                 Section("About") {
                     LabeledContent("Version", value: AppVersion.display)
+                    if let expiry = AppVersion.testFlightExpiry {
+                        LabeledContent("TestFlight build good until", value: expiry.formatted(date: .abbreviated, time: .omitted))
+                    }
                 }
             }
             .navigationTitle("Settings")
@@ -306,6 +309,22 @@ struct KitchenDisplaySection: View {
 
 /// "0.2.0 (202611080004)" — marketing version and build number (the upload time).
 enum AppVersion {
+    /// TestFlight builds stop opening 90 days after upload. The build number is the upload time
+    /// (yyyyMMddHHmm), so the expiry can be worked out on the device. nil for non-TestFlight builds.
+    static var testFlightExpiry: Date? {
+        guard Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt",
+              let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String, build.count == 12 else { return nil }
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = .current
+        f.dateFormat = "yyyyMMddHHmm"
+        return f.date(from: build).flatMap { Calendar.current.date(byAdding: .day, value: 90, to: $0) }
+    }
+
+    static var daysUntilExpiry: Int? {
+        testFlightExpiry.map { Calendar.current.dateComponents([.day], from: Date(), to: $0).day ?? 0 }
+    }
+
     static var display: String {
         let info = Bundle.main.infoDictionary ?? [:]
         let version = info["CFBundleShortVersionString"] as? String ?? "—"

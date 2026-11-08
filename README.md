@@ -65,6 +65,8 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - **Share from Safari:** on iPhone or iPad, tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
 - **Recipe box:** every recipe you add is saved, searchable by name or ingredient, and one tap to plan again.
 - **Cooking view:** big text, ingredients you can tick off, numbered steps you tap to keep your place, and your own notes ("double the garlic").
+- **Add to list…** (in a recipe's Ingredients) opens a checklist of tidied-up ingredients ("Ground beef (1 ½ pounds)") to send to a Reminders list. Things that already look like they're on the list start unticked. Nothing is ever added automatically.
+- **Tonight's dinner** shows in the header and on the slideshow, with its photo. After 8 PM it shows tomorrow's. Tap it to open the recipe.
 - Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap.
 
 ### Family
@@ -84,7 +86,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - A warm, soft palette with large touch targets.
 
 ### iPhone
-- The same app runs on iPhone with a tab layout. This becomes the companion for chores, lists and meals in later milestones.
+- The same app runs on iPhone with a tab layout for calendar, chores, lists and meals, and sees the same household as the iPad.
 
 ---
 
@@ -300,7 +302,20 @@ WeatherKit only works for apps signed by a paid team. Free-team builds show `--�
    ```
 3. Rebuild and install. Tap the weather in the header, then **Allow location**.
 
-### 6. First launch
+### 6. Family on TestFlight (install once, updates arrive by themselves)
+1. **App Store Connect → Users and Access**: add each family member, then **TestFlight → Internal Testing**: add them to a group (ours is "Family"). They accept the email invite **on the device signed in to their Apple ID**.
+2. **CloudKit schema → production** (only when the data model changes, and before the first upload):
+   1. Run a debug build on a device with `-cloudKitSchemaSetup YES` (`xcrun devicectl device process launch … com.guardiola.casitacal -- -cloudKitSchemaSetup YES`). It registers every record type **and the `cloudkit.share` type that family invites need**, using throwaway data.
+   2. [CloudKit Console](https://icloud.developer.apple.com) → Development → **Deploy Schema Changes**.
+   3. That debug install replaces TestFlight on the device: reinstall from TestFlight afterwards (data is kept).
+3. **Upload:** `scripts/testflight.sh` (patch bump), `minor` or `major`. It needs a clean git tree, bumps the version, uploads, commits, tags `vX.Y.Z` and pushes. Add a `## X.Y.Z` section to `CHANGELOG.md` first.
+4. **Invite family to the household:** on the iPad, Settings → Family sharing → **Invite family…** → Messages.
+5. **Never expire:** TestFlight builds stop opening after 90 days.
+   - `scripts/install-keepalive.sh` installs a weekly Mac job that uploads a maintenance build once the newest one is 60 days old.
+   - On each device, TestFlight → CasitaCal → **Automatic Updates: On**, so new builds install themselves. No reinstalling.
+   - Safety net: Settings → About shows "TestFlight build good until …", and the header shows an orange reminder in the last 14 days.
+
+### 7. First launch
 1. Tap **Sign in with Google**.
 2. On **"Google hasn't verified this app"**, tap **Advanced → Go to CasitaCal (unsafe)**. That's expected for a personal app.
 3. Google shows name and email first. Tap **Continue**, then **tick both calendar permissions**.
@@ -376,6 +391,9 @@ This repo is **public**. Never commit credentials or personal IDs.
 | **Weather shows `--°`** | Needs the paid Apple team with WeatherKit on (see setup step 5). Then tap the weather and choose **Allow location**. |
 | **Slideshow album isn't listed** | The iPad's Apple ID must have accepted the shared album invite, and Shared Albums must be on: iPad Settings → Apps → Photos. |
 | **A phone change hasn't appeared** | Wait up to 60 seconds, or switch views to force a refresh. |
+| **"iCloud upload failed"** or **invite button spins** | Usually the production CloudKit schema is behind. Do setup step 6.2, then reopen CasitaCal. "Cannot create new type cloudkit.share" means exactly this. |
+| **Can't install from TestFlight on a phone** | The invite was accepted with a different Apple ID. Each person accepts on their own device. |
+| **App won't open after ~90 days** | The TestFlight build expired. Install the latest in TestFlight, and check the keep-alive job (step 6.5). Log: `~/Library/Logs/CasitaCal-keepalive.log`. |
 
 ---
 
@@ -390,7 +408,8 @@ This repo is **public**. Never commit credentials or personal IDs.
 | 5. Chores, lists and meals | ✅ Done |
 | 6. iCloud sync, sharing across Apple IDs, iPhone companion layout | ✅ Done (sync verified iPad ↔ iPhone) |
 | 7. Reminders-backed lists, recipe import + Share from Safari, dark-room night clock, walk-up wake | ✅ Done |
-| 8. Distribution to family (TestFlight) | ⏳ Next |
+| 8. Distribution to family (TestFlight), family invites, auto-renewing builds | ✅ Done |
+| 9. Ingredients → shopping list, tonight's dinner on the dashboard | ✅ Done |
 
 ---
 

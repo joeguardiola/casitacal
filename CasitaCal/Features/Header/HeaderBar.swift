@@ -19,7 +19,18 @@ struct HeaderBar: View {
 
             WeatherBadge()
 
+            TonightDinnerCard()
+
             Spacer()
+
+            // Safety net: if a fresh TestFlight build hasn't arrived, say so well before it stops opening.
+            if let days = AppVersion.daysUntilExpiry, days <= 14 {
+                Label("Update CasitaCal in TestFlight (\(max(days, 0)) days left)", systemImage: "exclamationmark.arrow.circlepath")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.orange)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(.orange.opacity(0.12), in: Capsule())
+            }
 
             HStack(spacing: 14) {
                 ForEach(members.members) { member in

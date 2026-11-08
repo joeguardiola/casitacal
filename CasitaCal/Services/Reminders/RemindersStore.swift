@@ -175,6 +175,37 @@ final class RemindersStore {
         commit { try store.save(r, commit: true) }
     }
 
+    /// Adds several items at once (e.g. recipe ingredients), with an optional note on each.
+    func addMany(_ titles: [String], to list: ReminderList, notes: String? = nil) {
+        guard let calendar = store.calendar(withIdentifier: list.id) else { return }
+        let clean = titles.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        guard !clean.isEmpty else { return }
+        commit {
+            for title in clean {
+                let r = EKReminder(eventStore: store)
+                r.title = title
+                r.notes = notes
+                r.calendar = calendar
+                try store.save(r, commit: false)
+            }
+            try store.commit()
+        }
+    }
+
+    /// Open (not completed) item titles on a list, fetched fresh.
+    func openTitles(in list: ReminderList) async -> [String] {
+        guard let calendar = store.calendar(withIdentifier: list.id) else { return [] }
+        let predicate = store.predicateForIncompleteReminders(withDueDateStarting: nil, ending: nil, calendars: [calendar])
+        return await fetch(predicate).map(\.title)
+    }
+
+    /// The list ingredients should go to: the last one used, else a shopping/grocery list.
+    func preferredShoppingList(lastUsedID: String) -> ReminderList? {
+        allLists.first { $0.id == lastUsedID }
+            ?? allLists.first { l in ["shop", "grocer"].contains { l.title.lowercased().contains($0) } }
+            ?? lists.first ?? allLists.first
+    }
+
     func toggle(_ item: ReminderItem) {
         guard let r = store.calendarItem(withIdentifier: item.id) as? EKReminder else { return }
         r.isCompleted.toggle()

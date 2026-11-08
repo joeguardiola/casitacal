@@ -174,6 +174,7 @@ struct RecipeView: View {
     @State private var checked: Set<Int> = []
     @State private var currentStep: Int?
     @State private var notes = ""
+    @State private var addingToList = false
 
     var body: some View {
         NavigationStack {
@@ -210,6 +211,7 @@ struct RecipeView: View {
                 }
             }
             .onAppear { notes = recipe.notes ?? "" }
+            .sheet(isPresented: $addingToList) { AddIngredientsSheet(recipe: recipe) }
         }
     }
 
@@ -235,7 +237,15 @@ struct RecipeView: View {
 
     private var ingredients: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Ingredients").font(.title2.weight(.bold))
+            HStack {
+                Text("Ingredients").font(.title2.weight(.bold))
+                Spacer()
+                Button { addingToList = true } label: {
+                    Label("Add to list…", systemImage: "cart.badge.plus")
+                }
+                .buttonStyle(.bordered)
+                .help("Choose ingredients to add to a Reminders list")
+            }
             ForEach(Array(recipe.ingredientLines.enumerated()), id: \.offset) { i, line in
                 Button {
                     if checked.contains(i) { checked.remove(i) } else { checked.insert(i) }
@@ -324,6 +334,103 @@ struct RecipeView: View {
                     persistence.save()
                 }
         }
+    }
+}
+
+/// "Add to Shopping List…": pick which ingredients go on which Reminders list. Nothing is added
+/// until "Add" is tapped; things that look like they're already on the list start unchecked.
+struct AddIngredientsSheet: View {
+    @ObservedObject var recipe: CDRecipe
+    @Environment(RemindersStore.self) private var reminders
+    @Environment(\.dismiss) private var dismiss
+    @AppStorage("recipes.ingredientsListID") private var lastListID = ""
+
+    @State private var listID = ""
+    @State private var items: [ShoppingItems.Item] = []
+    @State private var selected: Set<Int> = []
+    @State private var alreadyThere: Set<Int> = []
+
+    private var list: ReminderList? { reminders.allLists.first { $0.id == listID } }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if reminders.access != .granted {
+                    Section {
+                        Button("Connect Reminders") { Task { await reminders.requestAccess(); await prepare() } }
+                    } footer: {
+                        Text("Ingredients go into one of your Reminders lists, like your shared Shopping List.")
+                    }
+                } else {
+                    Section {
+                        Picker("Add to", selection: $listID) {
+                            ForEach(reminders.allLists) { Text("\($0.emoji) \($0.title)").tag($0.id) }
+                        }
+                    }
+                    Section {
+                        ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+                            Button {
+                                if selected.contains(i) { selected.remove(i) } else { selected.insert(i) }
+                            } label: {
+                                HStack {
+                                    Image(systemName: selected.contains(i) ? "checkmark.circle.fill" : "circle")
+                                        .foregroundStyle(selected.contains(i) ? Palette.accent : Palette.inkSecondary)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(item.listTitle).foregroundStyle(Palette.ink)
+                                        if alreadyThere.contains(i) {
+                                            Text("Looks like it's already on the list").font(.caption).foregroundStyle(.orange)
+                                        }
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } header: {
+                        HStack {
+                            Text("Ingredients")
+                            Spacer()
+                            Button(selected.count == items.count ? "None" : "All") {
+                                selected = selected.count == items.count ? [] : Set(items.indices)
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Add to list")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Add \(selected.count)") {
+                        guard let list else { return }
+                        let titles = selected.sorted().map { items[$0].listTitle }
+                        reminders.addMany(titles, to: list, notes: "For \(recipe.title ?? "a recipe")")
+                        lastListID = list.id
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(selected.isEmpty || list == nil)
+                }
+            }
+            .task { await prepare() }
+            .onChange(of: listID) { Task { await markExisting() } }
+        }
+        .presentationDetents([.large])
+    }
+
+    private func prepare() async {
+        await reminders.reload()
+        items = recipe.ingredientLines.map(ShoppingItems.item(from:))
+        if listID.isEmpty { listID = reminders.preferredShoppingList(lastUsedID: lastListID)?.id ?? "" }
+        await markExisting()
+    }
+
+    /// Re-check against the chosen list; already-there items start unchecked.
+    private func markExisting() async {
+        guard let list else { selected = Set(items.indices); return }
+        let existing = await reminders.openTitles(in: list)
+        alreadyThere = Set(items.indices.filter { ShoppingItems.isAlreadyOnList(items[$0], existing: existing) })
+        selected = Set(items.indices).subtracting(alreadyThere)
     }
 }
 
