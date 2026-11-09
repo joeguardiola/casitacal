@@ -38,7 +38,7 @@ private struct DinnerLookup: View {
             case .header:
                 Button { showingRecipe = meal.recipe } label: { headerCard(meal, title) }
                     .buttonStyle(.plain)
-                    .disabled(meal.recipe == nil)
+                    .allowsHitTesting(meal.recipe != nil) // not .disabled, which would grey out the card
                     .sheet(item: $showingRecipe) { RecipeView(recipe: $0) }
                     .accessibilityLabel("\(label)'s dinner: \(title)")
             case .slideshow:

@@ -71,6 +71,27 @@ extension View {
     }
 }
 
+/// Keeps a rolling view on today as the date changes on an always-on screen.
+/// A view paged somewhere else stays where it is.
+struct FollowsToday: ViewModifier {
+    @Binding var anchor: Date
+    @State private var knownToday = Date()
+    @Environment(\.scenePhase) private var scenePhase
+
+    func body(content: Content) -> some View {
+        content
+            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in roll() }
+            .onChange(of: scenePhase) { _, phase in if phase == .active { roll() } }
+    }
+
+    private func roll() {
+        let now = Date()
+        guard !Calendar.app.isDate(knownToday, inSameDayAs: now) else { return }
+        anchor = CalendarRanges.rolledAnchor(anchor, previousToday: knownToday, now: now)
+        knownToday = now
+    }
+}
+
 /// Slides new content in from `edge` whenever `key` changes.
 struct PagedContent<Key: Hashable, Content: View>: View {
     let key: Key

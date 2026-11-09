@@ -337,8 +337,8 @@ struct RecipeView: View {
     }
 }
 
-/// "Add to Shopping List…": pick which ingredients go on which Reminders list. Nothing is added
-/// until "Add" is tapped; things that look like they're already on the list start unchecked.
+/// "Add to Shopping List…": pick which ingredients go on which Reminders list. Nothing starts
+/// ticked and nothing is added until "Add" is tapped.
 struct AddIngredientsSheet: View {
     @ObservedObject var recipe: CDRecipe
     @Environment(RemindersStore.self) private var reminders
@@ -425,12 +425,11 @@ struct AddIngredientsSheet: View {
         await markExisting()
     }
 
-    /// Re-check against the chosen list; already-there items start unchecked.
+    /// Notes which items already look like they're on the chosen list. Never changes what's ticked.
     private func markExisting() async {
-        guard let list else { selected = Set(items.indices); return }
+        guard let list else { alreadyThere = []; return }
         let existing = await reminders.openTitles(in: list)
         alreadyThere = Set(items.indices.filter { ShoppingItems.isAlreadyOnList(items[$0], existing: existing) })
-        selected = Set(items.indices).subtracting(alreadyThere)
     }
 }
 

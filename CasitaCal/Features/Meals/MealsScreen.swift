@@ -2,9 +2,8 @@ import CoreData
 import PhotosUI
 import SwiftUI
 
-/// Weekly meal plan: days across, breakfast/lunch/dinner/snack down.
+/// Rolling seven-day meal plan: today on the left, breakfast/lunch/dinner/snack down.
 struct MealsScreen: View {
-    @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
     @AppStorage("meals.showBreakfast") private var showBreakfast = true
     @AppStorage("meals.showLunch") private var showLunch = true
     @AppStorage("meals.showSnack") private var showSnack = false
@@ -13,7 +12,12 @@ struct MealsScreen: View {
     @State private var editing: MealCell?
     @State private var viewing: Viewing?
     @State private var showingRecipeBox = false
+    @State private var hoverPaging: Task<Void, Never>?
+    @State private var movedCount = 0
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.managedObjectContext) private var context
+
+    private static let dayCount = 7
 
     struct MealCell: Identifiable, Hashable {
         var day: String
@@ -32,7 +36,15 @@ struct MealsScreen: View {
         if let recipe = meal?.recipe { viewing = Viewing(cell: cell, recipe: recipe) } else { editing = cell }
     }
 
-    private var days: [Date] { CalendarRanges.days(in: CalendarRanges.range(for: .week, anchor: anchor)) }
+    /// A meal was dropped on `cell`. If that spot is taken, the two meals trade places.
+    private func move(_ payload: String, to cell: MealCell) -> Bool {
+        guard let id = UUID(uuidString: payload) else { return false }
+        let moved = (try? MealPlan.move(mealID: id, toDay: cell.day, slot: cell.slot.rawValue, context: context)) ?? false
+        if moved { movedCount += 1 }
+        return moved
+    }
+
+    private var days: [Date] { CalendarRanges.rollingDays(from: anchor, count: Self.dayCount) }
 
     private var slots: [MealSlot] {
         MealSlot.allCases.filter {
@@ -49,16 +61,16 @@ struct MealsScreen: View {
         VStack(spacing: 16) {
             HStack(spacing: 14) {
                 HStack(spacing: 4) {
-                    CircleNavButton(symbol: "chevron.left", label: "Previous week") { shift(-1) }
-                    CircleNavButton(symbol: "chevron.right", label: "Next week") { shift(1) }
+                    weekButton("chevron.left", label: "Previous week", by: -1)
+                    weekButton("chevron.right", label: "Next week", by: 1)
                 }
                 Text(title)
                     .font(sizeClass == .compact ? .title3.weight(.bold) : .title.weight(.bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
-                if sizeClass != .compact, !CalendarRanges.range(for: .week, anchor: anchor).contains(Date()) {
-                    Button("This week") { withAnimation(.snappy) { anchor = Date() } }
-                        .buttonStyle(.bordered).controlSize(.large)
+                if sizeClass != .compact, !Calendar.app.isDateInToday(anchor) {
+                    Button("Today", action: goToToday)
+                        .buttonStyle(.bordered).controlSize(.large).fixedSize()
                 }
                 Spacer()
                 Button { showingRecipeBox = true } label: {
@@ -70,7 +82,7 @@ struct MealsScreen: View {
                 }
                 .buttonStyle(.bordered).controlSize(.large)
                 Menu {
-                    Button("This week") { withAnimation(.snappy) { anchor = Date() } }
+                    Button("Today", action: goToToday)
                     Toggle("Breakfast", isOn: $showBreakfast)
                     Toggle("Lunch", isOn: $showLunch)
                     Toggle("Snacks", isOn: $showSnack)
@@ -85,9 +97,9 @@ struct MealsScreen: View {
             }
             PagedContent(key: days.first, edge: pageEdge) {
                 if sizeClass == .compact {
-                    MealList(days: days, slots: slots, onOpen: open)
+                    MealList(days: days, slots: slots, onOpen: open, onMove: move)
                 } else {
-                    MealGrid(days: days, slots: slots, onOpen: open)
+                    MealGrid(days: days, slots: slots, onOpen: open, onMove: move)
                 }
             }
             .swipeToPage(previous: { shift(-1) }, next: { shift(1) })
@@ -106,6 +118,27 @@ struct MealsScreen: View {
             }
         }
         .sheet(isPresented: $showingRecipeBox) { RecipeBox() }
+        .sensoryFeedback(.success, trigger: movedCount)
+        .modifier(FollowsToday(anchor: $anchor))
+    }
+
+    /// Week arrow that also pages while a dragged meal hovers over it, to reach other weeks.
+    private func weekButton(_ symbol: String, label: String, by n: Int) -> some View {
+        CircleNavButton(symbol: symbol, label: label) { shift(n) }
+            .dropDestination(for: String.self) { _, _ in false } isTargeted: { over in
+                hoverPaging?.cancel()
+                hoverPaging = over ? pageWhileHovering(by: n) : nil
+            }
+    }
+
+    private func pageWhileHovering(by n: Int) -> Task<Void, Never> {
+        Task { @MainActor in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(700))
+                if Task.isCancelled { return }
+                shift(n)
+            }
+        }
     }
 
     private var title: String {
@@ -116,7 +149,15 @@ struct MealsScreen: View {
     private func shift(_ n: Int) {
         pageEdge = n > 0 ? .trailing : .leading
         Task { @MainActor in
-            withAnimation(.snappy) { anchor = CalendarRanges.step(anchor, mode: .week, by: n) }
+            withAnimation(.snappy) { anchor = CalendarRanges.stepRolling(anchor, count: Self.dayCount, by: n) }
+        }
+    }
+
+    private func goToToday() {
+        let now = Date()
+        pageEdge = now < anchor ? .leading : .trailing
+        Task { @MainActor in
+            withAnimation(.snappy) { anchor = now }
         }
     }
 }
@@ -125,13 +166,16 @@ private struct MealGrid: View {
     let days: [Date]
     let slots: [MealSlot]
     var onOpen: (MealsScreen.MealCell, CDMeal?) -> Void
+    var onMove: (String, MealsScreen.MealCell) -> Bool
 
     @FetchRequest private var meals: FetchedResults<CDMeal>
 
-    init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void) {
+    init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void,
+         onMove: @escaping (String, MealsScreen.MealCell) -> Bool) {
         self.days = days
         self.slots = slots
         self.onOpen = onOpen
+        self.onMove = onMove
         _meals = FetchRequest(sortDescriptors: [], predicate: NSPredicate(format: "day IN %@", days.map { DayKey.from($0) }))
     }
 
@@ -183,7 +227,9 @@ private struct MealGrid: View {
                             MealTile(meal: meal, isBig: isBig, isToday: Calendar.app.isDateInToday(day))
                         }
                         .buttonStyle(.plain)
+                        .draggableMeal(meal)
                         .frame(width: dayWidth)
+                        .modifier(MealDropTarget(cornerRadius: 16) { onMove($0, .init(day: key, slot: slot)) })
                         .accessibilityLabel("\(slot.label), \(day.formatted(.dateTime.weekday(.wide))): \(meal?.title ?? "empty")")
                     }
                 }
@@ -255,13 +301,16 @@ private struct MealList: View {
     let days: [Date]
     let slots: [MealSlot]
     var onOpen: (MealsScreen.MealCell, CDMeal?) -> Void
+    var onMove: (String, MealsScreen.MealCell) -> Bool
 
     @FetchRequest private var meals: FetchedResults<CDMeal>
 
-    init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void) {
+    init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void,
+         onMove: @escaping (String, MealsScreen.MealCell) -> Bool) {
         self.days = days
         self.slots = slots
         self.onOpen = onOpen
+        self.onMove = onMove
         _meals = FetchRequest(sortDescriptors: [], predicate: NSPredicate(format: "day IN %@", days.map { DayKey.from($0) }))
     }
 
@@ -296,6 +345,8 @@ private struct MealList: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .draggableMeal(meal)
+                            .modifier(MealDropTarget(cornerRadius: 8) { onMove($0, .init(day: key, slot: slot)) })
                         }
                     }
                     .padding(14)
@@ -306,6 +357,63 @@ private struct MealList: View {
                 }
             }
         }
+    }
+}
+
+private extension View {
+    /// Press and hold a planned meal to pick it up. Empty spots can't be dragged.
+    @ViewBuilder
+    func draggableMeal(_ meal: CDMeal?) -> some View {
+        if let id = meal?.id?.uuidString, let title = meal?.title, !title.isEmpty {
+            draggable(id) { MealDragPreview(title: title, recipe: meal?.recipe) }
+        } else {
+            self
+        }
+    }
+}
+
+private struct MealDragPreview: View {
+    let title: String
+    let recipe: CDRecipe?
+
+    var body: some View {
+        HStack(spacing: 10) {
+            if recipe?.imageData != nil {
+                RecipePhoto(recipe: recipe)
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+            }
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(Palette.ink)
+                .lineLimit(2)
+        }
+        .padding(10)
+        .frame(maxWidth: 240)
+        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+}
+
+/// Accepts a dropped meal and highlights while one hovers over it.
+private struct MealDropTarget: ViewModifier {
+    var cornerRadius: CGFloat
+    var onDrop: (String) -> Bool
+    @State private var isTargeted = false
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
+        content
+            .overlay {
+                if isTargeted {
+                    shape.fill(Palette.accent.opacity(0.15))
+                        .overlay(shape.strokeBorder(Palette.accent, lineWidth: 3))
+                        .allowsHitTesting(false)
+                }
+            }
+            .dropDestination(for: String.self) { ids, _ in
+                guard let id = ids.first else { return false }
+                return onDrop(id)
+            } isTargeted: { isTargeted = $0 }
     }
 }
 
@@ -326,12 +434,28 @@ private struct MealEditor: View {
     @State private var link = LinkImport()
     @State private var photoItem: PhotosPickerItem?
     @State private var photoData: Data?
+    @FocusState private var titleFocused: Bool
+
+    /// Saved recipes matching what's being typed. Tapping one attaches it; typing alone never does.
+    private var suggestions: [CDRecipe] {
+        guard titleFocused, chosen == nil, link.result == nil else { return [] }
+        return RecipeSearch.suggestions(for: title, in: Array(savedRecipes), title: { $0.title })
+    }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("e.g. Tacos", text: $title).font(.title2)
+                    TextField("e.g. Tacos", text: $title).font(.title2).focused($titleFocused)
+                    ForEach(suggestions, id: \.objectID) { recipe in
+                        Button {
+                            titleFocused = false
+                            pick(recipe)
+                        } label: {
+                            RecipeSuggestionRow(recipe: recipe)
+                        }
+                        .buttonStyle(.plain)
+                    }
                 }
                 recipeSection
                 if !savedRecipes.isEmpty && chosen == nil && link.result == nil {
@@ -494,6 +618,26 @@ private struct MealEditor: View {
         }
         try? context.save()
         dismiss()
+    }
+}
+
+private struct RecipeSuggestionRow: View {
+    let recipe: CDRecipe
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 8, style: .continuous) }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            if recipe.imageData != nil {
+                RecipePhoto(recipe: recipe).frame(width: 40, height: 40).clipShape(shape)
+            } else {
+                Text(MealSlot.dinner.emoji).frame(width: 40, height: 40).background(Palette.accent.opacity(0.12), in: shape)
+            }
+            Text(recipe.title ?? "").foregroundStyle(Palette.ink).lineLimit(1)
+            Spacer(minLength: 0)
+            Image(systemName: "plus.circle").foregroundStyle(Palette.accent)
+        }
+        .contentShape(Rectangle())
+        .accessibilityLabel("Use saved recipe \(recipe.title ?? "")")
     }
 }
 

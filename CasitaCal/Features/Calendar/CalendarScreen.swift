@@ -20,7 +20,6 @@ struct CalendarScreen: View {
     @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
     /// The leftmost day in Week; otherwise the date the view is built around.
     @State private var anchor = Date()
-    @State private var knownToday = Date()
     @State private var pageEdge: Edge = .trailing
     @Environment(KioskController.self) private var kiosk
     @State private var selected: CalendarEvent?
@@ -47,10 +46,8 @@ struct CalendarScreen: View {
                 .swipeToPage(isEnabled: isConnected, previous: { page(-1) }, next: { page(1) })
         }
         .padding(isCompact ? 14 : 24)
-        .onChange(of: kiosk.wakeCount) { anchor = Date(); knownToday = Date() } // back to today after the slideshow
-        // The iPad stays on for days: keep today on the left when the date changes.
-        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in rollToNewDay() }
-        .onChange(of: scenePhase) { _, phase in if phase == .active { rollToNewDay() } }
+        .onChange(of: kiosk.wakeCount) { anchor = Date() } // back to today after the slideshow
+        .modifier(FollowsToday(anchor: $anchor))
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         // Reload when the range or calendar changes, then every 60s while visible & active.
@@ -138,13 +135,6 @@ struct CalendarScreen: View {
         Task { @MainActor in
             withAnimation(.snappy) { anchor = now }
         }
-    }
-
-    private func rollToNewDay() {
-        let now = Date()
-        guard !Calendar.app.isDate(knownToday, inSameDayAs: now) else { return }
-        anchor = CalendarRanges.rolledAnchor(anchor, previousToday: knownToday, now: now)
-        knownToday = now
     }
 
     @ViewBuilder

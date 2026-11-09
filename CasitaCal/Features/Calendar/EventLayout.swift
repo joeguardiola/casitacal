@@ -34,7 +34,7 @@ enum CalendarRanges {
         return calendar.date(byAdding: component, value: n, to: anchor) ?? anchor
     }
 
-    // MARK: Rolling week (Calendar screen only; Meals and Chores use real calendar weeks)
+    // MARK: Rolling week (Calendar and Meals; Chores uses real calendar weeks)
 
     static let defaultRollingDayCount = 5
 

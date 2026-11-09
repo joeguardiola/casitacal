@@ -26,7 +26,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 
 ### Calendar
 - **Three views:**
-  - **Week:** today on the left and the next days beside it (5 or 7), readable across the room. Tap a day's header to widen it.
+  - **Week:** today on the left and the next days beside it (5 or 7), readable across the room. Tap a day's header to widen it. Each day shows its planned dinner at the bottom.
   - **Month:** a grid with event chips.
   - **Schedule:** a 30-day agenda.
 - **Two-way Google Calendar sync:**
@@ -59,14 +59,15 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - Tap to check off. Completed items drop to the bottom, and **Clear** removes them for everyone sharing the list.
 
 ### Meals and recipes
-- **A weekly meal plan** with days across and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. Show only the meals you plan.
+- **A rolling seven-day meal plan** with today on the left and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. Show only the meals you plan.
+- **Press and hold a meal to move it** to another day or slot. Drop it on a taken spot and the two swap. Hold it over a week arrow to reach another week.
 - **Paste a recipe link** and CasitaCal pulls out the photo, ingredients, steps, times and servings. It reads the schema.org recipe data most recipe sites publish, so you skip the life story and ads. Pages without recipe data still give a title and photo.
 - **Share from Safari:** on iPhone or iPad, tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
 - **Recipe box:** every recipe you add is saved, searchable by name or ingredient, and one tap to plan again.
 - **Cooking view:** big text, ingredients you can tick off, numbered steps you tap to keep your place, and your own notes ("double the garlic").
-- **Add to list…** (in a recipe's Ingredients) opens a checklist of tidied-up ingredients ("Ground beef (1 ½ pounds)") to send to a Reminders list. Things that already look like they're on the list start unticked. Nothing is ever added automatically.
+- **Add to list…** (in a recipe's Ingredients) opens a checklist of tidied-up ingredients ("Ground beef (1 ½ pounds)") to send to a Reminders list. Nothing starts ticked, so you pick exactly what you need, and things that already look like they're on the list are flagged. Nothing is ever added automatically.
 - **Tonight's dinner** shows in the header and on the slideshow, with its photo. After 8 PM it shows tomorrow's. Tap it to open the recipe.
-- Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap.
+- Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap, and typing a name offers matching saved recipes.
 
 ### Family
 - **Profiles:** each person gets a name, an emoji avatar and a color. Colors match Google Calendar's 11 event colors.
