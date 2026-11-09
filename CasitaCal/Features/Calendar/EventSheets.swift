@@ -65,7 +65,6 @@ struct AddEventSheet: View {
     @State private var isSaving = false
     @State private var error: String?
     @State private var showForm = false
-    @FocusState private var focused: Bool
 
     var body: some View {
         NavigationStack {
@@ -73,7 +72,6 @@ struct AddEventSheet: View {
                 Section {
                     TextField("Soccer practice Tuesday 4pm", text: $text, axis: .vertical)
                         .font(.title2)
-                        .focused($focused)
                         .submitLabel(.done)
                         .onSubmit(quickAdd)
                 } header: {
@@ -115,7 +113,6 @@ struct AddEventSheet: View {
                     return d
                 }(), onDone: { dismiss() })
             }
-            .onAppear { focused = true }
         }
     }
 

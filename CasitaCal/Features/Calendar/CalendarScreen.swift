@@ -9,24 +9,30 @@ struct CalendarScreen: View {
     @AppStorage("calendar.mode") private var storedMode: CalendarMode = .week
     @Environment(\.horizontalSizeClass) private var sizeClass
     private var isCompact: Bool { sizeClass == .compact }
-    /// Phones only get Day and Schedule (Week/Month need iPad width).
-    private var mode: CalendarMode {
-        isCompact && (storedMode == .week || storedMode == .month) ? .schedule : storedMode
-    }
-    private var availableModes: [CalendarMode] { isCompact ? [.day, .schedule] : CalendarMode.allCases }
-    /// Picker binding that shows the effective mode (phones map Week/Month to Schedule).
+    /// Phones only get Schedule (Week/Month need iPad width).
+    private var mode: CalendarMode { isCompact ? .schedule : storedMode }
+    /// Picker binding that shows the effective mode.
     private var modeBinding: Binding<CalendarMode> {
         Binding(get: { mode }, set: { new in withAnimation(.snappy) { storedMode = new } })
     }
-    @AppStorage("calendar.dayByPerson") private var dayByPerson = true
+    @AppStorage("calendar.weekDayCount") private var weekDayCount = CalendarRanges.defaultRollingDayCount
     // Observed so the views redraw when the week-start setting changes.
     @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
+    /// The leftmost day in Week; otherwise the date the view is built around.
     @State private var anchor = Date()
+    @State private var knownToday = Date()
+    @State private var pageEdge: Edge = .trailing
     @Environment(KioskController.self) private var kiosk
     @State private var selected: CalendarEvent?
     @State private var isAdding = false
 
-    private var range: DateInterval { CalendarRanges.range(for: mode, anchor: anchor) }
+    private var range: DateInterval {
+        mode == .week
+            ? CalendarRanges.rollingRange(from: anchor, count: weekDayCount)
+            : CalendarRanges.range(for: mode, anchor: anchor)
+    }
+
+    private var isConnected: Bool { auth.state != .signedOut && store.selectedCalendarId != nil }
 
     private var visibleEvents: [CalendarEvent] {
         store.events.filter {
@@ -34,17 +40,17 @@ struct CalendarScreen: View {
         }
     }
 
-    private var visibleMembers: [Member] {
-        memberStore.members.filter(memberStore.isVisible)
-    }
-
     var body: some View {
         VStack(spacing: 16) {
             toolbar
-            content
+            PagedContent(key: Calendar.app.startOfDay(for: anchor), edge: pageEdge) { content }
+                .swipeToPage(isEnabled: isConnected, previous: { page(-1) }, next: { page(1) })
         }
         .padding(isCompact ? 14 : 24)
-        .onChange(of: kiosk.wakeCount) { anchor = Date() } // back to today after the slideshow
+        .onChange(of: kiosk.wakeCount) { anchor = Date(); knownToday = Date() } // back to today after the slideshow
+        // The iPad stays on for days: keep today on the left when the date changes.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in rollToNewDay() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { rollToNewDay() } }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Palette.canvas)
         // Reload when the range or calendar changes, then every 60s while visible & active.
@@ -76,7 +82,6 @@ struct CalendarScreen: View {
 
     /// The day new events default to: the day being viewed, or today if it's on screen.
     private var defaultAddDay: Date {
-        if mode == .day { return anchor }
         return range.contains(Date()) ? Date() : range.start
     }
 
@@ -89,17 +94,15 @@ struct CalendarScreen: View {
     @ViewBuilder
     private var content: some View {
         // While Google sign-in is being restored (.unknown), show cached events instead of the sign-in card.
-        if auth.state == .signedOut || store.selectedCalendarId == nil {
+        if !isConnected {
             GoogleConnectCard()
                 .frame(maxWidth: 560)
                 .frame(maxHeight: .infinity)
         } else {
             switch mode {
-            case .day:
-                DayView(day: anchor, events: visibleEvents, members: visibleMembers, byPerson: isCompact ? .constant(false) : $dayByPerson) { selected = $0 }
             case .week:
                 WeekView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members,
-                         onSelect: { selected = $0 }, onOpenDay: openDay)
+                         onSelect: { selected = $0 })
             case .month:
                 MonthView(anchor: anchor, days: CalendarRanges.monthGrid(for: anchor), events: visibleEvents,
                           members: memberStore.members, onOpenDay: openDay)
@@ -109,11 +112,39 @@ struct CalendarScreen: View {
         }
     }
 
+    /// Month cells open the rolling week starting on that day.
     private func openDay(_ day: Date) {
         withAnimation(.snappy) {
             anchor = day
-            storedMode = .day
+            storedMode = .week
         }
+    }
+
+    private func page(_ n: Int) {
+        pageEdge = n > 0 ? .trailing : .leading
+        // Separate update so the outgoing page also slides the new direction.
+        Task { @MainActor in
+            withAnimation(.snappy) {
+                anchor = mode == .week
+                    ? CalendarRanges.stepRolling(anchor, count: weekDayCount, by: n)
+                    : CalendarRanges.step(anchor, mode: mode, by: n)
+            }
+        }
+    }
+
+    private func goToToday() {
+        let now = Date()
+        pageEdge = now < anchor ? .leading : .trailing
+        Task { @MainActor in
+            withAnimation(.snappy) { anchor = now }
+        }
+    }
+
+    private func rollToNewDay() {
+        let now = Date()
+        guard !Calendar.app.isDate(knownToday, inSameDayAs: now) else { return }
+        anchor = CalendarRanges.rolledAnchor(anchor, previousToday: knownToday, now: now)
+        knownToday = now
     }
 
     @ViewBuilder
@@ -124,64 +155,86 @@ struct CalendarScreen: View {
     private var compactToolbar: some View {
         VStack(spacing: 10) {
             HStack(spacing: 8) {
-                navButton("chevron.left", label: "Previous") { anchor = CalendarRanges.step(anchor, mode: mode, by: -1) }
+                navButton("chevron.left", label: "Previous") { page(-1) }
                 Text(title)
                     .font(.title3.weight(.bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .frame(maxWidth: .infinity)
-                navButton("chevron.right", label: "Next") { anchor = CalendarRanges.step(anchor, mode: mode, by: 1) }
-            }
-            HStack {
-                Picker("View", selection: modeBinding) {
-                    ForEach(availableModes) { Text($0.title).tag($0) }
-                }
-                .pickerStyle(.segmented)
-                Button("Today") { withAnimation(.snappy) { anchor = Date() } }
+                Button("Today", action: goToToday)
                     .buttonStyle(.bordered)
+                navButton("chevron.right", label: "Next") { page(1) }
             }
             syncStatus
         }
     }
 
+    /// One row when everything fits (iPad landscape), two tidy rows when it doesn't (iPad portrait).
     private var regularToolbar: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: 14) {
+                dateControls
+                Spacer(minLength: 8)
+                syncStatus
+                daysPicker
+                viewPicker
+            }
+            VStack(spacing: 12) {
+                HStack(spacing: 14) {
+                    dateControls
+                    Spacer(minLength: 8)
+                    syncStatus
+                }
+                HStack(spacing: 14) {
+                    daysPicker
+                    Spacer(minLength: 8)
+                    viewPicker
+                }
+            }
+        }
+    }
+
+    private var dateControls: some View {
         HStack(spacing: 14) {
             HStack(spacing: 4) {
-                navButton("chevron.left", label: "Previous") { anchor = CalendarRanges.step(anchor, mode: mode, by: -1) }
-                navButton("chevron.right", label: "Next") { anchor = CalendarRanges.step(anchor, mode: mode, by: 1) }
+                navButton("chevron.left", label: "Previous") { page(-1) }
+                navButton("chevron.right", label: "Next") { page(1) }
             }
             Text(title)
                 .font(.title.weight(.bold))
                 .foregroundStyle(Palette.ink)
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
-            Button("Today") { withAnimation(.snappy) { anchor = Date() } }
+            Button("Today", action: goToToday)
                 .buttonStyle(.bordered)
                 .controlSize(.large)
-                .disabled(mode == .day ? Calendar.app.isDateInToday(anchor) : range.contains(Date()))
-
-            Spacer()
-
-            syncStatus
-
-            if mode == .day {
-                Toggle(isOn: $dayByPerson) {
-                    Label("By person", systemImage: "person.2")
-                }
-                .toggleStyle(.button)
-                .controlSize(.large)
-            }
-
-            Picker("View", selection: modeBinding) {
-                ForEach(availableModes) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 360)
+                .fixedSize()
+                .disabled(mode == .week ? Calendar.app.isDateInToday(anchor) : range.contains(Date()))
         }
     }
 
+    @ViewBuilder
+    private var daysPicker: some View {
+        if mode == .week {
+            Picker("Days shown", selection: $weekDayCount) {
+                Text("5 days").tag(5)
+                Text("7 days").tag(7)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 130)
+        }
+    }
+
+    private var viewPicker: some View {
+        Picker("View", selection: modeBinding) {
+            ForEach(CalendarMode.allCases) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .frame(width: 250)
+    }
+
     private func navButton(_ symbol: String, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: { withAnimation(.snappy, action) }) {
+        Button(action: action) {
             Image(systemName: symbol)
                 .font(.title3.weight(.semibold))
                 .frame(width: 44, height: 44)
@@ -207,14 +260,14 @@ struct CalendarScreen: View {
             Text("Updated \(synced, format: .dateTime.hour().minute())")
                 .font(.subheadline)
                 .foregroundStyle(Palette.inkSecondary)
+                .lineLimit(1)
+                .fixedSize()
         }
     }
 
     private var title: String {
         let cal = Calendar.app
         switch mode {
-        case .day:
-            return anchor.formatted(.dateTime.weekday(.wide).month(.wide).day())
         case .week:
             let days = CalendarRanges.days(in: range)
             guard let first = days.first, let last = days.last else { return "" }

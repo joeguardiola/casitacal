@@ -48,6 +48,8 @@ struct RootView: View {
             }
             .background(Palette.canvas)
             .overlay { KioskOverlay() }
+            // The header already shows the time; give the display the whole screen.
+            .statusBarHidden(true)
             // Waking from the slideshow or night clock always lands on the calendar.
             .onChange(of: kiosk.wakeCount) { section = .calendar }
         }

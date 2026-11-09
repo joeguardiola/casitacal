@@ -16,6 +16,7 @@ struct HeaderBar: View {
                         .foregroundStyle(Palette.inkSecondary)
                 }
             }
+            .fixedSize()
 
             WeatherBadge()
 
@@ -49,6 +50,7 @@ struct HeaderBar: View {
                     .accessibilityHint(members.isVisible(member) ? "Hide \(member.name)'s items" : "Show \(member.name)'s items")
                 }
             }
+            .fixedSize() // names never get squeezed; the dinner card gives way instead
         }
         .foregroundStyle(Palette.ink)
         .padding(.horizontal, 28)

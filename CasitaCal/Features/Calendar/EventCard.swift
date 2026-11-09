@@ -19,6 +19,33 @@ extension CalendarEvent {
         return start == end ? s : "\(s) – \(e)"
     }
 
+    /// Short form for narrow cards: "4–5p", "9:30–10a", "11a–1p". 24-hour locales stay 24-hour.
+    func compactTimeText(calendar: Calendar = .current, locale: Locale = .current) -> String {
+        if isAllDay { return "All day" }
+        let parts = { (d: Date) in (calendar.component(.hour, from: d), calendar.component(.minute, from: d)) }
+        let (sh, sm) = parts(start), (eh, em) = parts(end)
+
+        if locale.hourCycle == .oneToTwentyFour || locale.hourCycle == .zeroToTwentyThree {
+            let f = { (h: Int, m: Int) in String(format: "%02d:%02d", h, m) }
+            return start == end ? f(sh, sm) : "\(f(sh, sm))–\(f(eh, em))"
+        }
+        let f = { (h: Int, m: Int) -> String in
+            let h12 = h % 12 == 0 ? 12 : h % 12
+            return m == 0 ? "\(h12)" : String(format: "%d:%02d", h12, m)
+        }
+        let meridiem = { (h: Int) in h < 12 ? "a" : "p" }
+        if start == end { return f(sh, sm) + meridiem(sh) }
+        let startSuffix = meridiem(sh) == meridiem(eh) ? "" : meridiem(sh)
+        return "\(f(sh, sm))\(startSuffix)–\(f(eh, em))\(meridiem(eh))"
+    }
+
+    /// Just the start, short: "4p", "9:30a". For chips with room for little else.
+    func compactStartText(calendar: Calendar = .current, locale: Locale = .current) -> String {
+        var point = self
+        point.end = start
+        return point.compactTimeText(calendar: calendar, locale: locale)
+    }
+
     var startText: String {
         isAllDay ? "All day" : start.formatted(date: .omitted, time: .shortened)
     }
@@ -42,7 +69,7 @@ struct MemberDots: View {
     }
 }
 
-/// Card used in Week, Schedule and the all-day strips.
+/// Card used in Week and Schedule.
 struct EventCard: View {
     enum Size { case compact, regular, large }
 
@@ -51,6 +78,42 @@ struct EventCard: View {
     var size: Size = .regular
 
     var body: some View {
+        if size == .compact { compactBody } else { fullBody }
+    }
+
+    /// Narrow columns: as much of the width as possible goes to the title.
+    private var compactBody: some View {
+        HStack(alignment: .top, spacing: 6) {
+            RoundedRectangle(cornerRadius: 1.5)
+                .fill(style.color)
+                .frame(width: 3)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(event.title)
+                    .font(titleFont)
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(3)
+                HStack(spacing: 4) {
+                    Text(event.compactTimeText())
+                        .font(detailFont)
+                        .foregroundStyle(Palette.inkSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Spacer(minLength: 0)
+                    if !style.members.isEmpty {
+                        MemberDots(members: style.members, size: 18)
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 7)
+        .padding(.horizontal, 7)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(style.softColor, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+    }
+
+    private var fullBody: some View {
         HStack(alignment: .top, spacing: 10) {
             RoundedRectangle(cornerRadius: 3)
                 .fill(style.color)
@@ -93,41 +156,5 @@ struct EventCard: View {
 
     private var detailFont: Font {
         size == .large ? .body : .footnote
-    }
-}
-
-/// Block drawn inside a time grid (Day view).
-struct TimeBlock: View {
-    let positioned: PositionedEvent
-    let style: EventStyle
-    let height: CGFloat
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            RoundedRectangle(cornerRadius: 2.5)
-                .fill(style.color)
-                .frame(width: 5)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(positioned.event.title)
-                    .font(.callout.weight(.semibold))
-                    .foregroundStyle(Palette.ink)
-                    .lineLimit(height > 60 ? 3 : 1)
-                if height > 40 {
-                    Text(positioned.event.timeText())
-                        .font(.caption)
-                        .foregroundStyle(Palette.inkSecondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
-            if height > 40, !style.members.isEmpty {
-                MemberDots(members: style.members, size: 20)
-            }
-        }
-        .padding(6)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(style.softColor, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .background(Palette.surface, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .contentShape(Rectangle())
     }
 }

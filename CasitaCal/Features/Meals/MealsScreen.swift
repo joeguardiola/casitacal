@@ -9,6 +9,7 @@ struct MealsScreen: View {
     @AppStorage("meals.showLunch") private var showLunch = true
     @AppStorage("meals.showSnack") private var showSnack = false
     @State private var anchor = Date()
+    @State private var pageEdge: Edge = .trailing
     @State private var editing: MealCell?
     @State private var viewing: Viewing?
     @State private var showingRecipeBox = false
@@ -82,11 +83,14 @@ struct MealsScreen: View {
                 }
                 .buttonStyle(.bordered).controlSize(.large)
             }
-            if sizeClass == .compact {
-                MealList(days: days, slots: slots, onOpen: open)
-            } else {
-                MealGrid(days: days, slots: slots, onOpen: open)
+            PagedContent(key: days.first, edge: pageEdge) {
+                if sizeClass == .compact {
+                    MealList(days: days, slots: slots, onOpen: open)
+                } else {
+                    MealGrid(days: days, slots: slots, onOpen: open)
+                }
             }
+            .swipeToPage(previous: { shift(-1) }, next: { shift(1) })
         }
         .padding(sizeClass == .compact ? 14 : 24)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -110,7 +114,10 @@ struct MealsScreen: View {
     }
 
     private func shift(_ n: Int) {
-        withAnimation(.snappy) { anchor = CalendarRanges.step(anchor, mode: .week, by: n) }
+        pageEdge = n > 0 ? .trailing : .leading
+        Task { @MainActor in
+            withAnimation(.snappy) { anchor = CalendarRanges.step(anchor, mode: .week, by: n) }
+        }
     }
 }
 
@@ -130,6 +137,20 @@ private struct MealGrid: View {
 
     var body: some View {
         let byCell = Dictionary(meals.map { ("\($0.day ?? "")-\($0.slot ?? "")", $0) }, uniquingKeysWith: { a, _ in a })
+        // Explicit day widths keep all seven days on screen when the iPad is in portrait.
+        GeometryReader { geo in
+            grid(byCell: byCell, dayWidth: dayWidth(total: geo.size.width))
+                .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
+        }
+    }
+
+    private func dayWidth(total: CGFloat) -> CGFloat {
+        let count = CGFloat(max(days.count, 1))
+        let gaps: CGFloat = 10 * count
+        return max((total - 84 - gaps) / count, 0)
+    }
+
+    private func grid(byCell: [String: CDMeal], dayWidth: CGFloat) -> some View {
         Grid(horizontalSpacing: 10, verticalSpacing: 10) {
             GridRow {
                 Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]).frame(width: 84, height: 1)
@@ -143,7 +164,7 @@ private struct MealGrid: View {
                             .font(.title2.weight(.bold))
                             .foregroundStyle(isToday ? Palette.accent : Palette.ink)
                     }
-                    .frame(maxWidth: .infinity)
+                    .frame(width: dayWidth)
                 }
             }
             ForEach(slots) { slot in
@@ -162,6 +183,7 @@ private struct MealGrid: View {
                             MealTile(meal: meal, isBig: isBig, isToday: Calendar.app.isDateInToday(day))
                         }
                         .buttonStyle(.plain)
+                        .frame(width: dayWidth)
                         .accessibilityLabel("\(slot.label), \(day.formatted(.dateTime.weekday(.wide))): \(meal?.title ?? "empty")")
                     }
                 }
@@ -304,13 +326,12 @@ private struct MealEditor: View {
     @State private var link = LinkImport()
     @State private var photoItem: PhotosPickerItem?
     @State private var photoData: Data?
-    @FocusState private var focused: Bool
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("e.g. Tacos", text: $title).font(.title2).focused($focused)
+                    TextField("e.g. Tacos", text: $title).font(.title2)
                 }
                 recipeSection
                 if !savedRecipes.isEmpty && chosen == nil && link.result == nil {
@@ -423,7 +444,6 @@ private struct MealEditor: View {
         let counts = ((try? context.fetch(all)) ?? []).compactMap(\.title).filter { !$0.isEmpty }
             .reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
         recent = counts.sorted { ($1.value, $0.key) < ($0.value, $1.key) }.prefix(12).map(\.key)
-        focused = existing == nil
     }
 
     private func save() {

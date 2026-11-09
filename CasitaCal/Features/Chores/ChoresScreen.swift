@@ -5,6 +5,8 @@ struct ChoresScreen: View {
     @Environment(ChoreStore.self) private var store
     @Environment(MemberStore.self) private var memberStore
     @State private var day = Date()
+    @State private var pageEdge: Edge = .trailing
+    @State private var availableWidth: CGFloat = 0
     @State private var editing: Chore?
     @State private var isAdding = false
     @State private var phoneColumn: UUID? // nil = Anyone
@@ -20,6 +22,7 @@ struct ChoresScreen: View {
     var body: some View {
         VStack(spacing: 16) {
             header
+                .swipeToPage(previous: { shift(-1) }, next: { shift(1) })
             if store.chores.isEmpty {
                 ContentUnavailableView {
                     Label("No chores yet", systemImage: "checklist")
@@ -32,16 +35,21 @@ struct ChoresScreen: View {
             } else if sizeClass == .compact {
                 phoneLayout
             } else {
-                ScrollView(.horizontal) {
-                    HStack(alignment: .top, spacing: 14) {
-                        ForEach(columns, id: \.?.id) { member in
-                            ChoreColumn(member: member, day: day, onEdit: { editing = $0 })
-                                .frame(width: columnWidth)
+                // While the columns overflow, a sideways drag scrolls them and only the header pages.
+                PagedContent(key: columnsOverflow ? nil : DayKey.from(day), edge: pageEdge) {
+                    ScrollView(.horizontal) {
+                        HStack(alignment: .top, spacing: 14) {
+                            ForEach(columns, id: \.?.id) { member in
+                                ChoreColumn(member: member, day: day, onEdit: { editing = $0 })
+                                    .frame(width: columnWidth)
+                            }
                         }
+                        .padding(.bottom, 8)
                     }
-                    .padding(.bottom, 8)
+                    .scrollIndicators(.hidden)
                 }
-                .scrollIndicators(.hidden)
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { availableWidth = $0 }
+                .swipeToPage(isEnabled: !columnsOverflow, previous: { shift(-1) }, next: { shift(1) })
             }
         }
         .padding(sizeClass == .compact ? 14 : 24)
@@ -87,12 +95,19 @@ struct ChoresScreen: View {
                 .padding(.horizontal, 2)
             }
             .scrollIndicators(.hidden)
-            ChoreColumn(member: selected, day: day, onEdit: { editing = $0 })
+            PagedContent(key: DayKey.from(day), edge: pageEdge) {
+                ChoreColumn(member: selected, day: day, onEdit: { editing = $0 })
+            }
+            .swipeToPage(previous: { shift(-1) }, next: { shift(1) })
         }
     }
 
     private var columnWidth: CGFloat {
         columns.count <= 4 ? 280 : 250
+    }
+
+    private var columnsOverflow: Bool {
+        CGFloat(columns.count) * columnWidth + CGFloat(max(columns.count - 1, 0)) * 14 > availableWidth
     }
 
     private var header: some View {
@@ -114,7 +129,10 @@ struct ChoresScreen: View {
     }
 
     private func shift(_ n: Int) {
-        withAnimation(.snappy) { day = Calendar.app.date(byAdding: .day, value: n, to: day) ?? day }
+        pageEdge = n > 0 ? .trailing : .leading
+        Task { @MainActor in
+            withAnimation(.snappy) { day = Calendar.app.date(byAdding: .day, value: n, to: day) ?? day }
+        }
     }
 }
 

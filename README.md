@@ -25,9 +25,8 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 ## Features
 
 ### Calendar
-- **Four views:**
-  - **Day:** a time grid with an optional column per person.
-  - **Week:** Monday–Sunday columns of event cards, readable across the room.
+- **Three views:**
+  - **Week:** today on the left and the next days beside it (5 or 7), readable across the room. Tap a day's header to widen it.
   - **Month:** a grid with event chips.
   - **Schedule:** a 30-day agenda.
 - **Two-way Google Calendar sync:**
@@ -131,10 +130,10 @@ Every event is assigned to zero or more family members. Events with nobody assig
 ### Getting around
 | Want to… | Do this |
 |---|---|
-| Switch view | **Day / Week / Month / Schedule** at the top right |
-| Move through time | **‹ ›** arrows. **Today** jumps back. |
-| Open a specific day | Tap a day header in Week, or any cell in Month |
-| See each person's day side by side | Day view → **By person** |
+| Switch view | **Week / Month / Schedule** at the top right |
+| Move through time | Swipe left or right, or use the **‹ ›** arrows. **Today** jumps back. |
+| Read a busy day | Tap its header in Week to widen the column |
+| Jump to a specific day | Tap any cell in Month |
 | Hide someone's events | Tap their avatar in the header. Tap again to show them. |
 | See an event's details | Tap the event |
 
@@ -339,7 +338,7 @@ CasitaCal/
   Services/Persistence/      Core Data household store (schema in code, CloudKit-ready)
   Features/Chores|Lists|Meals/  chore chart and editor, shared lists, weekly meal plan
   Services/Google/           sign-in, Calendar REST client, DTOs, EventMapper (who's it for)
-  Features/Calendar/         EventStore (sync and cache), layout math, Day/Week/Month/Schedule, sheets
+  Features/Calendar/         EventStore (sync and cache), layout math, Week/Month/Schedule, sheets
   Features/Header/           clock, weather badge and forecast, avatar filter bar
   Features/Kiosk/            slideshow and night-clock overlays
   Features/Photos/           album picker and preview

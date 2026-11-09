@@ -1,7 +1,7 @@
 import Foundation
 
 enum CalendarMode: String, CaseIterable, Identifiable {
-    case day, week, month, schedule
+    case week, month, schedule
     var id: String { rawValue }
     var title: String { rawValue.capitalized }
 }
@@ -11,8 +11,6 @@ enum CalendarRanges {
     /// The interval a mode needs loaded for a given anchor date.
     static func range(for mode: CalendarMode, anchor: Date, calendar: Calendar = .app) -> DateInterval {
         switch mode {
-        case .day:
-            return calendar.dateInterval(of: .day, for: anchor)!
         case .week:
             return calendar.dateInterval(of: .weekOfYear, for: anchor)!
         case .month:
@@ -29,12 +27,35 @@ enum CalendarRanges {
     /// Step the anchor forward/back by one page of the mode.
     static func step(_ anchor: Date, mode: CalendarMode, by n: Int, calendar: Calendar = .app) -> Date {
         let component: Calendar.Component = switch mode {
-        case .day: .day
         case .week: .weekOfYear
         case .month: .month
         case .schedule: .weekOfYear
         }
         return calendar.date(byAdding: component, value: n, to: anchor) ?? anchor
+    }
+
+    // MARK: Rolling week (Calendar screen only; Meals and Chores use real calendar weeks)
+
+    static let defaultRollingDayCount = 5
+
+    /// `count` consecutive days with `start`'s day on the left.
+    static func rollingRange(from start: Date, count: Int, calendar: Calendar = .app) -> DateInterval {
+        let first = calendar.startOfDay(for: start)
+        return DateInterval(start: first, end: calendar.date(byAdding: .day, value: count, to: first)!)
+    }
+
+    static func rollingDays(from start: Date, count: Int, calendar: Calendar = .app) -> [Date] {
+        days(in: rollingRange(from: start, count: count, calendar: calendar), calendar: calendar)
+    }
+
+    /// Move a rolling window forward/back by whole pages of `count` days.
+    static func stepRolling(_ anchor: Date, count: Int, by n: Int, calendar: Calendar = .app) -> Date {
+        calendar.date(byAdding: .day, value: count * n, to: anchor) ?? anchor
+    }
+
+    /// At a new day: a calendar that was showing today follows it; one paged elsewhere stays put.
+    static func rolledAnchor(_ anchor: Date, previousToday: Date, now: Date, calendar: Calendar = .app) -> Date {
+        calendar.isDate(anchor, inSameDayAs: previousToday) ? now : anchor
     }
 
     static func days(in interval: DateInterval, calendar: Calendar = .app) -> [Date] {
@@ -57,64 +78,9 @@ enum CalendarRanges {
     }
 }
 
-/// A timed event placed in a day's time grid.
-struct PositionedEvent: Identifiable, Hashable {
-    var event: CalendarEvent
-    /// Portion of the event inside this day.
-    var start: Date
-    var end: Date
-    var column: Int
-    var columnCount: Int
-    var id: String { event.id }
-}
-
 enum DayLayout {
-    /// Events shorter than this still get room to show their title.
-    static let minimumDuration: TimeInterval = 30 * 60
-
     static func allDay(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .app) -> [CalendarEvent] {
         events.filter { $0.isAllDay && $0.overlaps(day: day, calendar: calendar) }
-    }
-
-    /// Timed events on `day`, clipped to the day, with side-by-side columns for overlaps.
-    static func timed(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .app) -> [PositionedEvent] {
-        let dayStart = calendar.startOfDay(for: day)
-        let dayEnd = calendar.date(byAdding: .day, value: 1, to: dayStart)!
-
-        let segments = events
-            .filter { !$0.isAllDay && $0.overlaps(day: day, calendar: calendar) }
-            .map { e in
-                PositionedEvent(event: e, start: max(e.start, dayStart), end: min(e.end, dayEnd), column: 0, columnCount: 1)
-            }
-            .sorted { ($0.start, $1.end) < ($1.start, $0.end) } // earlier first; longer first on ties
-
-        var result: [PositionedEvent] = []
-        var cluster: [PositionedEvent] = []
-        var columnEnds: [Date] = []
-        var clusterEnd = Date.distantPast
-
-        func flush() {
-            let count = max(columnEnds.count, 1)
-            result += cluster.map { var p = $0; p.columnCount = count; return p }
-            cluster = []
-            columnEnds = []
-        }
-
-        for var seg in segments {
-            let visualEnd = max(seg.end, seg.start.addingTimeInterval(minimumDuration))
-            if seg.start >= clusterEnd { flush() }
-            if let free = columnEnds.firstIndex(where: { $0 <= seg.start }) {
-                seg.column = free
-                columnEnds[free] = visualEnd
-            } else {
-                seg.column = columnEnds.count
-                columnEnds.append(visualEnd)
-            }
-            cluster.append(seg)
-            clusterEnd = max(clusterEnd, visualEnd)
-        }
-        flush()
-        return result
     }
 
     /// Everything on a day (all-day first, then by start), for list-style views.
@@ -122,5 +88,36 @@ enum DayLayout {
         events
             .filter { $0.overlaps(day: day, calendar: calendar) }
             .sorted { ($0.isAllDay ? 0 : 1, $0.start, $0.title) < ($1.isAllDay ? 0 : 1, $1.start, $1.title) }
+    }
+}
+
+/// Month grid sizing: rows share the height, and each shows only the events that fit.
+enum MonthCells {
+    static let maxChips = 6
+    /// Padding (10) plus the date line (26).
+    private static let fixedHeight: CGFloat = 36
+    /// One event chip plus the gap above it.
+    private static let chipPitch: CGFloat = 23
+
+    static func rowHeight(total: CGFloat, rows: Int, spacing: CGFloat) -> CGFloat {
+        guard rows > 0 else { return 0 }
+        let usable = total - spacing * CGFloat(rows - 1)
+        return max(usable / CGFloat(rows), 0)
+    }
+
+    static func chipCount(rowHeight: CGFloat) -> Int {
+        let fits = Int((rowHeight - fixedHeight) / chipPitch)
+        return min(max(fits, 0), maxChips)
+    }
+}
+
+/// Column widths for the rolling week: equal, or one column double-width.
+enum WeekColumns {
+    static func widths(total: CGFloat, spacing: CGFloat, count: Int, widened: Int?) -> [CGFloat] {
+        guard count > 0 else { return [] }
+        let isValid = widened.map { (0..<count).contains($0) } ?? false
+        let usable = max(total - spacing * CGFloat(count - 1), 0)
+        let unit = usable / CGFloat(count + (isValid ? 1 : 0))
+        return (0..<count).map { isValid && $0 == widened ? unit * 2 : unit }
     }
 }

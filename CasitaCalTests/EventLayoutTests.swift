@@ -18,42 +18,81 @@ struct EventLayoutTests {
         CalendarEvent(id: id, title: id, start: start, end: end, isAllDay: allDay, taggedMemberIDs: [])
     }
 
-    @Test func nonOverlappingEventsGetOneColumn() {
-        let day = date(2026, 11, 9)
-        let a = event("a", date(2026, 11, 9, 9), date(2026, 11, 9, 10))
-        let b = event("b", date(2026, 11, 9, 10), date(2026, 11, 9, 11))
-        let laid = DayLayout.timed([a, b], on: day, calendar: cal)
-        #expect(laid.map(\.columnCount) == [1, 1])
-        #expect(laid.map(\.column) == [0, 0])
-    }
-
-    @Test func overlappingEventsSplitColumns() {
-        let day = date(2026, 11, 9)
-        let a = event("a", date(2026, 11, 9, 9), date(2026, 11, 9, 11))
-        let b = event("b", date(2026, 11, 9, 10), date(2026, 11, 9, 12))
-        let c = event("c", date(2026, 11, 9, 11), date(2026, 11, 9, 12)) // reuses a's column
-        let laid = DayLayout.timed([a, b, c], on: day, calendar: cal)
-        let byId = Dictionary(uniqueKeysWithValues: laid.map { ($0.id, $0) })
-        #expect(byId["a"]!.column == 0)
-        #expect(byId["b"]!.column == 1)
-        #expect(byId["c"]!.column == 0)
-        #expect(laid.allSatisfy { $0.columnCount == 2 })
-    }
-
-    @Test func overnightEventIsClippedToEachDay() {
-        let e = event("late", date(2026, 11, 9, 22), date(2026, 11, 10, 2))
-        let mon = DayLayout.timed([e], on: date(2026, 11, 9), calendar: cal)
-        let tue = DayLayout.timed([e], on: date(2026, 11, 10), calendar: cal)
-        #expect(mon.first?.end == date(2026, 11, 10))
-        #expect(tue.first?.start == date(2026, 11, 10))
-        #expect(tue.first?.end == date(2026, 11, 10, 2))
-    }
-
     @Test func allDayEndIsExclusive() {
         // Google: a single all-day event on the 9th has end.date = the 10th.
         let e = event("trip", date(2026, 11, 9), date(2026, 11, 10), allDay: true)
         #expect(DayLayout.allDay([e], on: date(2026, 11, 9), calendar: cal).count == 1)
         #expect(DayLayout.allDay([e], on: date(2026, 11, 10), calendar: cal).isEmpty)
+    }
+
+    @Test func rollingWeekStartsOnAnchorAcrossMonthEnd() {
+        let days = CalendarRanges.rollingDays(from: date(2026, 11, 29, 15), count: 5, calendar: cal)
+        #expect(days == [date(2026, 11, 29), date(2026, 11, 30), date(2026, 12, 1), date(2026, 12, 2), date(2026, 12, 3)])
+    }
+
+    @Test func rollingWeekCrossesDaylightSavingEnd() {
+        // US DST ends Nov 1 2026; every column is still a distinct local midnight.
+        let days = CalendarRanges.rollingDays(from: date(2026, 10, 30), count: 5, calendar: cal)
+        #expect(days == [date(2026, 10, 30), date(2026, 10, 31), date(2026, 11, 1), date(2026, 11, 2), date(2026, 11, 3)])
+    }
+
+    @Test func pagingMovesByWholeWindows() {
+        let start = date(2026, 11, 8)
+        #expect(CalendarRanges.stepRolling(start, count: 5, by: 1, calendar: cal) == date(2026, 11, 13))
+        #expect(CalendarRanges.stepRolling(start, count: 7, by: -1, calendar: cal) == date(2026, 11, 1))
+    }
+
+    @Test func anchorFollowsTodayAtMidnightOnlyIfOnToday() {
+        let yesterday = date(2026, 11, 8, 12), now = date(2026, 11, 9, 0, 1)
+        #expect(CalendarRanges.rolledAnchor(date(2026, 11, 8, 7), previousToday: yesterday, now: now, calendar: cal) == now)
+        let pagedAway = date(2026, 11, 20)
+        #expect(CalendarRanges.rolledAnchor(pagedAway, previousToday: yesterday, now: now, calendar: cal) == pagedAway)
+    }
+
+    @Test func columnWidthsFillTheSpace() {
+        #expect(WeekColumns.widths(total: 540, spacing: 10, count: 5, widened: nil) == [100, 100, 100, 100, 100])
+        let w = WeekColumns.widths(total: 540, spacing: 10, count: 5, widened: 0)
+        #expect(abs(w[0] - 2 * w[1]) < 0.001)
+        #expect(abs(w.reduce(0, +) + 40 - 540) < 0.001)
+        #expect(WeekColumns.widths(total: 540, spacing: 10, count: 5, widened: 9) == [100, 100, 100, 100, 100])
+    }
+
+    @Test func compactTimesAreShort() {
+        let us = Locale(identifier: "en_US")
+        let t = { (s: Date, e: Date) in self.event("x", s, e).compactTimeText(calendar: self.cal, locale: us) }
+        #expect(t(date(2026, 11, 9, 16), date(2026, 11, 9, 17)) == "4–5p")
+        #expect(t(date(2026, 11, 9, 9, 30), date(2026, 11, 9, 10)) == "9:30–10a")
+        #expect(t(date(2026, 11, 9, 11), date(2026, 11, 9, 13)) == "11a–1p")
+        #expect(t(date(2026, 11, 9, 0), date(2026, 11, 9, 12)) == "12a–12p")
+        #expect(t(date(2026, 11, 9, 16), date(2026, 11, 9, 16)) == "4p")
+        let allDay = event("x", date(2026, 11, 9), date(2026, 11, 10), allDay: true)
+        #expect(allDay.compactTimeText(calendar: cal, locale: us) == "All day")
+    }
+
+    @Test func monthRowsShareHeightAndLimitChips() {
+        #expect(MonthCells.rowHeight(total: 540, rows: 6, spacing: 6) == 85)
+        #expect(MonthCells.chipCount(rowHeight: 90) == 2)
+        #expect(MonthCells.chipCount(rowHeight: 10) == 0)
+        #expect(MonthCells.chipCount(rowHeight: 900) == MonthCells.maxChips)
+    }
+
+    @Test func compactStartIsJustTheStart() {
+        let us = Locale(identifier: "en_US")
+        let e = event("x", date(2026, 11, 9, 9, 30), date(2026, 11, 9, 11))
+        #expect(e.compactStartText(calendar: cal, locale: us) == "9:30a")
+    }
+
+    @Test func compactTimesKeep24HourClocks() {
+        let e = event("x", date(2026, 11, 9, 16), date(2026, 11, 9, 17, 30))
+        #expect(e.compactTimeText(calendar: cal, locale: Locale(identifier: "en_GB@hours=h23")) == "16:00–17:30")
+    }
+
+    @Test func swipeNeedsAClearHorizontalMove() {
+        #expect(SwipePaging.direction(translation: CGSize(width: -90, height: 5), velocity: .zero) == .next)
+        #expect(SwipePaging.direction(translation: CGSize(width: 90, height: 5), velocity: .zero) == .previous)
+        #expect(SwipePaging.direction(translation: CGSize(width: -35, height: 0), velocity: CGSize(width: -700, height: 0)) == .next)
+        #expect(SwipePaging.direction(translation: CGSize(width: -20, height: 0), velocity: .zero) == nil)
+        #expect(SwipePaging.direction(translation: CGSize(width: 90, height: 120), velocity: .zero) == nil)
     }
 
     @Test func monthGridCoversWholeWeeks() {
