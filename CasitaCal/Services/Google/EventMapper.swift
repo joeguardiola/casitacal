@@ -27,6 +27,8 @@ enum EventMapper {
     }
 
     static func assignment(for event: CalendarEvent, from members: [Member]) -> Assignment {
+        // "Saint Joseph" isn't an event for a family member named Joseph.
+        if event.isFeastOverlay { return Assignment(members: [], source: .none) }
         if !event.taggedMemberIDs.isEmpty {
             let tagged = event.taggedMemberIDs.compactMap { id in members.first { $0.id == id } }
             if !tagged.isEmpty { return Assignment(members: tagged, source: .tag) }

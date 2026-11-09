@@ -15,6 +15,10 @@ struct CalendarEvent: Identifiable, Hashable, Codable, Sendable {
     var taggedMemberIDs: [UUID]
     var recurringEventId: String?
     var htmlLink: String?
+    /// Set on on-device feast days, which are never sent to Google or cached.
+    var feastOverlayDay: String? = nil
+
+    var isFeastOverlay: Bool { feastOverlayDay != nil }
 
     static let membersPropertyKey = "casitacal_members"
 

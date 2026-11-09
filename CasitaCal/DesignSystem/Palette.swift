@@ -23,6 +23,8 @@ enum Palette {
     static let accent = Color(hex: 0xE87A61)
     /// Events not tagged to anyone ("Everyone").
     static let family = Color(light: 0x9C8F84, dark: 0xB3A79B)
+    /// Catholic feast days, on the calendar and in the daily info.
+    static let feast = Color(light: 0x6B5BAE, dark: 0xA99BE0)
 }
 
 extension MemberColor {

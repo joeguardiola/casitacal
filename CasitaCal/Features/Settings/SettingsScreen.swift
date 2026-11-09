@@ -42,6 +42,8 @@ struct SettingsScreen: View {
 
                 CalendarPrefsSection()
 
+                DailyInfoSection()
+
                 HouseholdSharingSection()
 
                 if UIDevice.current.userInterfaceIdiom == .pad {

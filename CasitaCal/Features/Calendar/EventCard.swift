@@ -3,11 +3,13 @@ import SwiftUI
 /// Resolves an event's people and color once, for any view.
 struct EventStyle {
     let members: [Member]
-    var color: Color { members.first?.color.strong ?? Palette.family }
+    private let isFeast: Bool
+    var color: Color { isFeast ? Palette.feast : members.first?.color.strong ?? Palette.family }
     var softColor: Color { color.opacity(0.17) }
 
     init(_ event: CalendarEvent, members all: [Member]) {
         members = EventMapper.members(for: event, from: all)
+        isFeast = event.isFeastOverlay
     }
 }
 

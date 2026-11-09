@@ -69,6 +69,12 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - **Tonight's dinner** shows in the header and on the slideshow, with its photo. After 8 PM it shows tomorrow's. Tap it to open the recipe.
 - Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap, and typing a name offers matching saved recipes.
 
+### Daily info
+- **Optional topics next to the weather,** all off until chosen in Settings: Catholic feast days, coming-up events, national days, today in history, and a thought for the day. Tap for details.
+- **Catholic days** follow the U.S. calendar, worked out on the device: holy days, days of obligation, and feast days, with a story and ideas for food and things to do. Moved feasts and lifted obligations are handled for each year.
+- **Show them on the calendar** with a setting, or use **Add to family calendar** on a single day. Nothing is added to Google by itself.
+- Events can be added without an app update by editing `docs/daily/events.json`.
+
 ### Family
 - **Profiles:** each person gets a name, an emoji avatar and a color. Colors match Google Calendar's 11 event colors.
 - **Automatic "who's it for":** CasitaCal works out each event's people from its color or the names in its title. Details are under [Who's it for?](#whos-it-for).
@@ -121,7 +127,7 @@ Every event is assigned to zero or more family members. Events with nobody assig
 ### Privacy
 - Google sign-in tokens live in the iPad's **Keychain**.
 - Events are cached in the app's private storage and deleted when you sign out.
-- Nothing is sent anywhere except Google.
+- Your calendar is sent nowhere except Google. Optional **Daily info** topics fetch dates from Wikipedia and a small events file from this project's site, with no personal details.
 - See the [privacy policy](https://joeguardiola.github.io/casitacal/privacy.html).
 
 ---

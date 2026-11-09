@@ -22,7 +22,9 @@ struct CalendarScreen: View {
     @State private var anchor = Date()
     @State private var pageEdge: Edge = .trailing
     @Environment(KioskController.self) private var kiosk
+    @Environment(DailyInfoStore.self) private var daily
     @State private var selected: CalendarEvent?
+    @State private var feastDay: DailyDay?
     @State private var isAdding = false
 
     private var range: DateInterval {
@@ -34,8 +36,26 @@ struct CalendarScreen: View {
     private var isConnected: Bool { auth.state != .signedOut && store.selectedCalendarId != nil }
 
     private var visibleEvents: [CalendarEvent] {
-        store.events.filter {
+        let real = store.events.filter {
             EventMapper.isVisible($0, members: memberStore.members, hidden: memberStore.hiddenMemberIDs)
+        }
+        return real + daily.feastOverlay(in: overlayRange, existing: store.events)
+    }
+
+    /// Month grids show a few days from the months either side.
+    private var overlayRange: DateInterval {
+        let cal = Calendar.app
+        let start = cal.date(byAdding: .day, value: -7, to: range.start) ?? range.start
+        let end = cal.date(byAdding: .day, value: 7, to: range.end) ?? range.end
+        return DateInterval(start: start, end: end)
+    }
+
+    /// Feast days open their story; they have nothing to edit or delete in Google.
+    private func open(_ event: CalendarEvent) {
+        if event.isFeastOverlay {
+            feastDay = DailyDay(date: event.start)
+        } else {
+            selected = event
         }
     }
 
@@ -58,6 +78,7 @@ struct CalendarScreen: View {
         .sheet(item: $selected) { e in
             EventDetailSheet(event: e)
         }
+        .sheet(item: $feastDay) { DailyInfoSheet(date: $0.date) }
         .sheet(isPresented: $isAdding) {
             AddEventSheet(day: defaultAddDay)
         }
@@ -99,12 +120,12 @@ struct CalendarScreen: View {
             switch mode {
             case .week:
                 WeekView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members,
-                         onSelect: { selected = $0 })
+                         onSelect: open)
             case .month:
                 MonthView(anchor: anchor, days: CalendarRanges.monthGrid(for: anchor), events: visibleEvents,
                           members: memberStore.members, onOpenDay: openDay)
             case .schedule:
-                ScheduleView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members) { selected = $0 }
+                ScheduleView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members, onSelect: open)
             }
         }
     }

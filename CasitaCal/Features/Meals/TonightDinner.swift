@@ -58,7 +58,7 @@ private struct DinnerLookup: View {
                     .background(Palette.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             VStack(alignment: .leading, spacing: 1) {
-                Text("\(label)'s dinner").font(.caption.weight(.semibold)).foregroundStyle(Palette.inkSecondary)
+                Text("\(label)'s dinner").font(.caption.weight(.semibold)).foregroundStyle(Palette.inkSecondary).lineLimit(1).minimumScaleFactor(0.75)
                 Text(title).font(.headline).foregroundStyle(Palette.ink).lineLimit(1)
             }
             .frame(maxWidth: 220, alignment: .leading)

@@ -1,0 +1,2324 @@
+[
+ {
+  "id": "andrew",
+  "name": "Saint Andrew",
+  "rank": "feast",
+  "blurb": "The fisherman, Peter's brother, and patron of Scotland.",
+  "on": "11-30",
+  "story": "Andrew brought Peter to Jesus. An X-shaped cross carries his name, and the Scottish flag shows it.",
+  "food": [
+   "Cullen skink, a Scottish smoked fish soup",
+   "Fish and chips",
+   "Scottish shortbread",
+   "A Scottish supper of mashed turnips and potatoes"
+  ],
+  "do": [
+   "Pipe a saltire, his X-shaped cross, on shortbread",
+   "Start the St. Andrew Christmas novena",
+   "Bring a friend to Mass"
+  ],
+  "readings": [
+   "Matthew 4:18–22"
+  ],
+  "prayers": [
+   "St. Andrew Christmas Novena"
+  ]
+ },
+ {
+  "id": "advent-1",
+  "name": "First Sunday of Advent",
+  "rank": "principal",
+  "blurb": "The Church's new year begins and the wait for Christmas starts.",
+  "story": "Advent looks two ways at once: back to the first Christmas and ahead to Christ's return. It is a quiet, hopeful season that gets its own space before the Christmas parties begin.",
+  "food": [
+   "A simple soup supper while the first candle is lit"
+  ],
+  "do": [
+   "Start a Jesse Tree",
+   "Set up the Advent wreath and light the first purple candle",
+   "Hang the Advent calendar",
+   "Add decorations a little at a time instead of all at once",
+   "Stir up the Christmas baking, an old English custom",
+   "Draw a family patron saint for the year from a hat",
+   "Add a piece of straw to the manger for each good deed"
+  ],
+  "prayers": [
+   "Advent wreath prayers"
+  ]
+ },
+ {
+  "id": "nicholas",
+  "name": "Saint Nicholas",
+  "rank": "optional",
+  "blurb": "The bishop who secretly gave gifts, and the real Santa.",
+  "on": "12-06",
+  "story": "Nicholas tossed bags of gold through a window to keep three poor girls from being sold, and shoes are still set out the night before.",
+  "food": [
+   "Chocolate coins and oranges",
+   "Speculaas spice cookies",
+   "Dutch meatballs",
+   "Mulled cider"
+  ],
+  "do": [
+   "Slip a coin into someone’s shoe, as he did for three poor daughters",
+   "Put out shoes the night before",
+   "Secretly do something kind",
+   "Write letters to Santa"
+  ],
+  "prayers": [
+   "Nicene Creed"
+  ]
+ },
+ {
+  "id": "ambrose",
+  "name": "Saint Ambrose",
+  "rank": "memorial",
+  "blurb": "Milan's bishop, patron of beekeepers, who baptized Augustine.",
+  "on": "12-07",
+  "story": "Ambrose was a governor, not even baptized, when the crowd in Milan demanded him for bishop. Legend says bees settled on his lips as a baby, a sign of his sweet words.",
+  "food": [
+   "Honey cake",
+   "Minestrone, in honor of Milan"
+  ],
+  "do": [
+   "Make a beeswax candle"
+  ],
+  "prayers": [
+   "Penitential Prayer of St. Ambrose"
+  ]
+ },
+ {
+  "id": "immaculate",
+  "name": "The Immaculate Conception",
+  "rank": "solemnity",
+  "blurb": "Mary is conceived without sin, and it's the U.S. patronal feast.",
+  "on": "12-08",
+  "story": "This is about Mary's conception, not Jesus'. Pius IX defined it in 1854, and four years later Mary used the phrase to Bernadette.",
+  "food": [
+   "An all-white meal, or waffles"
+  ],
+  "do": [
+   "Light candles in the windows the night before, as Colombian families do",
+   "Throw a white party",
+   "Go to Mass with the kids",
+   "Walk through the house in a little procession for Mary"
+  ],
+  "readings": [
+   "Luke 1:26–38"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "A prayer to the Immaculate Conception"
+  ]
+ },
+ {
+  "id": "juan-diego",
+  "name": "Saint Juan Diego",
+  "rank": "optional",
+  "blurb": "The Mexican peasant who met Our Lady at Tepeyac.",
+  "on": "12-09",
+  "story": "An Indigenous farmer on his way to Mass, Juan Diego met Mary at Tepeyac hill and carried her message to a doubtful bishop.",
+  "food": [
+   "Warm atole",
+   "Tacos",
+   "Cinnamon cookies"
+  ],
+  "do": [
+   "Draw roses on a poster-board cloak and act out the story"
+  ]
+ },
+ {
+  "id": "guadalupe",
+  "name": "Our Lady of Guadalupe",
+  "rank": "feast",
+  "blurb": "Mary appears in Mexico in 1531 and leaves her image on a cloak.",
+  "on": "12-12",
+  "story": "Roses in December tumbled out of Juan Diego's cloak in front of the bishop, and her image stayed on it. Patroness of the Americas.",
+  "food": [
+   "Champurrado, thick Mexican hot chocolate",
+   "Tamales",
+   "Churros",
+   "Mexican hot chocolate"
+  ],
+  "do": [
+   "Wake up early and sing Las Mañanitas",
+   "Bring roses to church",
+   "Go to a mariachi Mass",
+   "Try braids with ribbons"
+  ],
+  "readings": [
+   "Luke 1:39–47"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "St. John Paul II's Prayer to Our Lady of Guadalupe"
+  ]
+ },
+ {
+  "id": "loreto",
+  "name": "Our Lady of Loreto",
+  "rank": "optional",
+  "blurb": "The Marian shrine in Italy, and patroness of pilots.",
+  "on": "12-10",
+  "story": "Tradition says the house where Mary grew up was carried to Loreto, Italy, which is how she became patroness of pilots and air travel.",
+  "food": [
+   "An Italian dinner"
+  ],
+  "do": [
+   "Build a gingerbread house, in honor of the Holy House"
+  ],
+  "prayers": [
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "lucy",
+  "name": "Saint Lucy",
+  "rank": "memorial",
+  "blurb": "A young martyr whose name means light, near the darkest days of the year.",
+  "on": "12-13",
+  "story": "In Sweden, a daughter dresses in a white gown with a red sash and a candle crown, and brings buns to the family before dawn.",
+  "food": [
+   "Cuccìa, the sweet wheat berry dish of Sicily",
+   "Lussekatter, saffron buns"
+  ],
+  "do": [
+   "Have the oldest daughter serve breakfast in a candle crown, Swedish style",
+   "Winter Ember Days: Wednesday, Friday and Saturday after today",
+   "Make a paper candle crown",
+   "Serve breakfast in bed",
+   "Light the Christmas lights tonight"
+  ]
+ },
+ {
+  "id": "john-cross",
+  "name": "Saint John of the Cross",
+  "rank": "memorial",
+  "blurb": "A Spanish Carmelite mystic.",
+  "on": "12-14",
+  "story": "John worked with St. Teresa of Avila to reform the Carmelites and was jailed by his own brothers, writing some of his greatest poetry in that cell.",
+  "food": [
+   "A simple garlic soup"
+  ],
+  "do": [
+   "Read a few lines of his poetry aloud"
+  ],
+  "prayers": [
+   "A passage of The Spiritual Canticle"
+  ]
+ },
+ {
+  "id": "advent-3",
+  "name": "Gaudete Sunday",
+  "rank": "principal",
+  "blurb": "The rose candle is lit, and the Church says rejoice because Christmas is close.",
+  "story": "Gaudete is Latin for rejoice. Halfway through Advent the purple lightens to rose, a small reminder that the waiting has a happy end.",
+  "food": [
+   "Something pink for dessert, like strawberry cake or pink frosted cookies"
+  ],
+  "do": [
+   "Light the rose candle",
+   "Bake something to give to a neighbor",
+   "Wear pink",
+   "Set up the Nativity scene and have the Baby Jesus figure blessed"
+  ]
+ },
+ {
+  "id": "christmas",
+  "name": "Christmas",
+  "rank": "solemnity",
+  "blurb": "The birth of Jesus.",
+  "on": "12-25",
+  "story": "The Word was made flesh and dwelt among us, and the whole season that follows runs to the Baptism of the Lord.",
+  "food": [
+   "Panettone",
+   "Tamales, as many Mexican families do",
+   "A birthday cake for Jesus",
+   "The family's favorite dinner"
+  ],
+  "do": [
+   "Sing a carol in another language",
+   "Sing to Jesus at the manger",
+   "Add Baby Jesus to the nativity",
+   "Go to Mass as a family",
+   "Have a joyful and unhurried day"
+  ],
+  "readings": [
+   "Luke 2:1–20"
+  ],
+  "indulgence": "Plenary for devoutly receiving the Pope's Urbi et Orbi blessing, even by television or radio."
+ },
+ {
+  "id": "stephen",
+  "name": "Saint Stephen",
+  "rank": "feast",
+  "blurb": "The first martyr, the day after Christmas.",
+  "on": "12-26",
+  "story": "A deacon who served Jerusalem's widows, Stephen forgave the crowd stoning him. Good King Wenceslas went out on the Feast of Stephen.",
+  "food": [
+   "Soups or stews shared with neighbors"
+  ],
+  "do": [
+   "Go door to door with holly and carols, as Ireland’s wren boys still do",
+   "Give a Christmas gift away to someone in need",
+   "Sing Good King Wenceslas",
+   "Deliver boxes of Christmas cookies to the neighbors, in the spirit of Boxing Day"
+  ],
+  "readings": [
+   "Acts 6:1–7:60"
+  ]
+ },
+ {
+  "id": "john-apostle",
+  "name": "Saint John the Apostle",
+  "rank": "feast",
+  "blurb": "The Beloved Disciple.",
+  "on": "12-27",
+  "story": "Legend says John drank poisoned wine and lived, so wine is blessed today.",
+  "food": [
+   "Wine or grape juice, blessed",
+   "Something deep-fried, because legend says he survived a vat of boiling oil"
+  ],
+  "do": [
+   "Toast each other",
+   "Read a bit of John's Gospel"
+  ],
+  "readings": [
+   "John 1:1–18"
+  ]
+ },
+ {
+  "id": "innocents",
+  "name": "The Holy Innocents",
+  "rank": "feast",
+  "blurb": "Bethlehem's baby boys, killed by Herod.",
+  "on": "12-28",
+  "story": "A heavy feast placed right in the joy of Christmas. An old custom turns the day over to the youngest child.",
+  "food": [
+   "Let the youngest pick the menu",
+   "Cream of wheat or grits, as a baby food joke"
+  ],
+  "do": [
+   "Pray for children who are suffering",
+   "Let the baby of the family be in charge",
+   "Pray for children in danger",
+   "Put the kids in charge for the day",
+   "Play harmless pranks"
+  ],
+  "readings": [
+   "Matthew 2:13–18"
+  ],
+  "prayers": [
+   "The Coventry Carol"
+  ]
+ },
+ {
+  "id": "holy-family",
+  "name": "The Holy Family",
+  "rank": "feast",
+  "blurb": "Jesus, Mary and Joseph as a family, in the days just after Christmas.",
+  "story": "God chose to grow up in an ordinary home, with parents, chores and a trade to learn. This feast is a good excuse to enjoy your own family.",
+  "food": [
+   "A favorite family recipe, or one handed down from a grandparent",
+   "A family potluck"
+  ],
+  "do": [
+   "Take a family photo",
+   "Pray together for each person at the table",
+   "Go on a family outing"
+  ],
+  "readings": [
+   "Luke 2:39–52"
+  ]
+ },
+ {
+  "id": "mary-mother-god",
+  "name": "Mary, the Holy Mother of God",
+  "rank": "solemnity",
+  "blurb": "The new year opens with Mary, on the Octave Day of Christmas.",
+  "on": "01-01",
+  "story": "Calling Mary Mother of God is really a statement about Jesus: that he is truly God. The Council of Ephesus settled the title in 431.",
+  "food": [
+   "Black-eyed peas and greens, a Southern New Year dish",
+   "Twelve grapes at midnight, the Spanish custom",
+   "White food or waffles",
+   "Grapes for good luck, an old Spanish custom"
+  ],
+  "do": [
+   "Pray together for the new year",
+   "Pick a patron saint for the year by drawing names"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "Veni Creator Spiritus",
+   "Te Deum"
+  ],
+  "indulgence": "Plenary when the Veni Creator is prayed on January 1. The Te Deum, prayed publicly on December 31, carries one as well."
+ },
+ {
+  "id": "holy-name",
+  "name": "The Most Holy Name of Jesus",
+  "rank": "optional",
+  "blurb": "A day to honor the name of Jesus, given at his circumcision.",
+  "on": "01-03",
+  "story": "Eight days after his birth, the child received the name the angel had given him. It means God saves.",
+  "food": [
+   "Alphabet soup"
+  ],
+  "do": [
+   "Talk about how we use God's name"
+  ],
+  "readings": [
+   "Luke 2:21",
+   "Philippians 2:9–11"
+  ],
+  "prayers": [
+   "Litany of the Holy Name"
+  ]
+ },
+ {
+  "id": "seton",
+  "name": "Saint Elizabeth Ann Seton",
+  "rank": "memorial",
+  "blurb": "A New York widow and convert who founded Catholic schools, the first American-born saint.",
+  "on": "01-04",
+  "story": "Elizabeth Seton raised five children on her own after her husband died, joined the Church over her family's objections, and began the Sisters of Charity in Maryland. Her schools became a model for American Catholic education.",
+  "food": [
+   "New York-style pizza, for her hometown",
+   "Black and white cookies"
+  ],
+  "do": [
+   "Thank a teacher",
+   "Write a note to a Catholic school"
+  ]
+ },
+ {
+  "id": "neumann",
+  "name": "Saint John Neumann",
+  "rank": "memorial",
+  "blurb": "Philadelphia's immigrant bishop, who organized a diocesan school system.",
+  "on": "01-05",
+  "story": "A Bohemian immigrant, Neumann became Bishop of Philadelphia and built the first diocesan Catholic school system in the country.",
+  "food": [
+   "Philly cheesesteaks"
+  ],
+  "do": [
+   "Thank someone who runs a Catholic school"
+  ]
+ },
+ {
+  "id": "epiphany",
+  "name": "The Epiphany of the Lord",
+  "rank": "solemnity",
+  "blurb": "The Wise Men reach Bethlehem and Christ is shown to all nations.",
+  "story": "Following a star, foreigners arrive with gold, frankincense and myrrh. Many Catholic homes mark the new year on this day by blessing the house with chalk over the door.",
+  "food": [
+   "Rosca de Reyes, with a tiny baby figure baked inside",
+   "French galette des rois",
+   "King cake with a hidden bean or tiny figure, easy to make from canned cinnamon roll dough in a bundt pan"
+  ],
+  "do": [
+   "Whoever finds the baby in the rosca hosts tamales at Candlemas",
+   "Chalk the door with the year and the initials C, M and B",
+   "Crown whoever finds the bean as the family's King or Queen",
+   "Let the Wise Men finally reach the nativity scene",
+   "Put out shoes overnight for the Wise Men"
+  ],
+  "readings": [
+   "Matthew 2:1–12"
+  ]
+ },
+ {
+  "id": "baptism",
+  "name": "The Baptism of the Lord",
+  "rank": "feast",
+  "blurb": "Jesus is baptized in the Jordan, and the Christmas season ends.",
+  "story": "John hesitates, Jesus insists, and the voice from heaven names him the beloved Son. It is the natural day to remember your own baptisms.",
+  "food": [
+   "A special dessert for anyone with a baptism story to tell",
+   "Fondue, for a good dunking"
+  ],
+  "do": [
+   "Look up everyone’s baptism date and light their baptism candles",
+   "Light baptism candles and renew your baptismal promises",
+   "Look up each person's baptism date and write it on the calendar"
+  ],
+  "readings": [
+   "Matthew 3:13–17"
+  ]
+ },
+ {
+  "id": "sebastian",
+  "name": "Saint Sebastian",
+  "rank": "optional",
+  "blurb": "Roman soldier and martyr, shot with arrows, patron of athletes.",
+  "on": "01-20",
+  "story": "Sebastian served in the Roman guard while quietly helping Christians. Survived being shot with arrows, then was martyred on confronting the emperor. Patron of athletes and soldiers.",
+  "food": [
+   "Shish kebabs, skewers standing in for the arrows"
+  ],
+  "do": [
+   "Pray for family athletes and those in the military",
+   "Have the team over"
+  ]
+ },
+ {
+  "id": "agnes",
+  "name": "Saint Agnes",
+  "rank": "memorial",
+  "blurb": "A young Roman martyr whose name sounds like agnus, the Latin for lamb.",
+  "on": "01-21",
+  "story": "Agnes refused to give up her faith as a young girl in third-century Rome. Lambs blessed on her feast still provide wool for the pallium worn by archbishops.",
+  "food": [
+   "Lamb chops or stew",
+   "A lamb-shaped cake"
+  ],
+  "do": [
+   "Look up the two lambs blessed in Rome today, whose wool becomes the archbishops’ palliums",
+   "Learn the story of the blessed lambs in Rome"
+  ]
+ },
+ {
+  "id": "unborn",
+  "name": "Day of Prayer for the Unborn",
+  "rank": "tradition",
+  "blurb": "A day of prayer and penance in the U.S. for the legal protection of unborn children.",
+  "on": "01-22",
+  "story": "U.S. dioceses keep this day each January, near the anniversary of Roe v. Wade, with prayer and penance. It moves to January 23 if the 22nd is a Sunday.",
+  "food": [
+   "Simple meatless meals as a family offering"
+  ],
+  "do": [
+   "Pray for a family expecting a baby",
+   "Pray for mothers and babies",
+   "Bring diapers or supplies to a pregnancy center"
+  ]
+ },
+ {
+  "id": "vincent",
+  "name": "Saint Vincent of Saragossa",
+  "rank": "optional",
+  "blurb": "A Spanish deacon and martyr, patron of winemakers.",
+  "on": "01-23",
+  "story": "Vincent was a deacon of Spain tortured under Diocletian. Vineyard country took him as patron, maybe because Vincent sounds like the French for wine.",
+  "food": [
+   "Boeuf bourguignon, from the vineyards that claim him",
+   "Grape juice or wine at dinner, and maybe some grapes and cheese"
+  ],
+  "do": [
+   "Toast the winemakers with grape juice",
+   "Sit down and take it easy for an evening",
+   "Host a grape juice or wine tasting"
+  ]
+ },
+ {
+  "id": "conversion-paul",
+  "name": "The Conversion of Saint Paul",
+  "rank": "feast",
+  "blurb": "A persecutor of Christians meets Jesus on the road to Damascus.",
+  "on": "01-25",
+  "story": "Saul set off to arrest Christians and arrived blind and changed. Paul's letters shaped the Church from then on.",
+  "food": [
+   "A regular family dinner with a good conversation",
+   "Hummus and falafel, in honor of Damascus"
+  ],
+  "do": [
+   "Talk about a time someone surprised you by changing",
+   "Play blind man's bluff"
+  ],
+  "readings": [
+   "Acts 9:1–22"
+  ]
+ },
+ {
+  "id": "aquinas",
+  "name": "Saint Thomas Aquinas",
+  "rank": "memorial",
+  "blurb": "The great Dominican teacher who proved faith and reason are friends.",
+  "on": "01-28",
+  "story": "Classmates called him the Dumb Ox because he was big and quiet. His teacher predicted the world would hear that ox bellow, and his Summa still shapes Catholic thought.",
+  "food": [
+   "Big hearty ox-tail or beef stew"
+  ],
+  "do": [
+   "Ask the hardest question you can think of and try to answer it together",
+   "Pray for students"
+  ],
+  "prayers": [
+   "Pange Lingua",
+   "Adoro Te Devote",
+   "Tantum Ergo"
+  ]
+ },
+ {
+  "id": "brigid",
+  "name": "Saint Brigid of Ireland",
+  "rank": "tradition",
+  "blurb": "Ireland's beloved abbess, known for generosity.",
+  "on": "02-01",
+  "story": "Stories about Brigid are full of bread, butter and beer that never ran out because she gave everything away. Rush crosses made on her day are still hung over Irish doors.",
+  "food": [
+   "Barmbrack or colcannon",
+   "Irish scones or soda bread with butter"
+  ],
+  "do": [
+   "Leave a cloth outside overnight for her blessing, an Irish custom",
+   "Weave a St. Brigid's cross out of straw or paper",
+   "Give something away",
+   "Shake cream in a jar until it turns to butter"
+  ]
+ },
+ {
+  "id": "presentation",
+  "name": "Candlemas",
+  "rank": "lord",
+  "blurb": "Forty days after Christmas, Jesus is presented in the Temple.",
+  "on": "02-02",
+  "story": "Simeon calls the baby a light for the nations, so candles are blessed today for the year ahead. It's also the traditional end of the Christmas decorations and the origin of Groundhog Day's weather lore.",
+  "food": [
+   "Tamales and atole, the Mexican Candelaria meal",
+   "Crepes, round and golden like the sun"
+  ],
+  "do": [
+   "Bring your candles to Mass to be blessed",
+   "Eat dinner by candlelight, or leave the electric lights off all day",
+   "Take down the last of the Christmas decorations"
+  ],
+  "readings": [
+   "Luke 2:22–38"
+  ]
+ },
+ {
+  "id": "blaise",
+  "name": "Saint Blaise",
+  "rank": "optional",
+  "blurb": "Patron of throat ailments, who saved a boy choking on a fish bone.",
+  "on": "02-03",
+  "story": "Blaise was an Armenian bishop and doctor. Priests bless throats on his feast using two candles tied in a cross.",
+  "food": [
+   "A slice of saved Christmas panettone, Milan's custom for healthy throats",
+   "Whole fish, and practice finding the bones"
+  ],
+  "do": [
+   "Get your throat blessed at Mass",
+   "Go to Mass for the blessing of throats"
+  ]
+ },
+ {
+  "id": "agatha",
+  "name": "Saint Agatha",
+  "rank": "memorial",
+  "blurb": "A Sicilian martyr and patron of Catania, invoked against fire.",
+  "on": "02-05",
+  "story": "Agatha is one of the virgin martyrs named at Mass in the Roman Canon. Sicilians honor her with small round cream-filled cakes.",
+  "food": [
+   "Cream puffs or minne di Sant'Agata, round Sicilian cakes"
+  ],
+  "do": [
+   "Pray for someone facing breast cancer",
+   "Pray for women facing illness",
+   "Learn where the fire extinguisher is"
+  ]
+ },
+ {
+  "id": "miki",
+  "name": "Saint Paul Miki and Companions",
+  "rank": "memorial",
+  "blurb": "Japanese Catholics and missionaries crucified at Nagasaki in 1597.",
+  "on": "02-06",
+  "story": "Paul Miki, a Japanese Jesuit, preached from his cross. Secret Christians kept the faith there for over two hundred years without priests.",
+  "food": [
+   "Sushi, teriyaki or another Japanese meal",
+   "Castella sponge cake"
+  ],
+  "do": [
+   "Fold origami cranes",
+   "Pray for Christians who are persecuted today"
+  ]
+ },
+ {
+  "id": "bakhita",
+  "name": "Saint Josephine Bakhita",
+  "rank": "optional",
+  "blurb": "Born in Sudan and enslaved as a child, she became a gentle Italian nun.",
+  "on": "02-08",
+  "story": "Kidnapped so young that she forgot her own name, Bakhita was later freed in Italy, entered religious life, and was known for her kindness. She is the patron of survivors of trafficking.",
+  "food": [
+   "Italian food, in honor of her adopted home"
+  ],
+  "do": [
+   "Pray for victims of human trafficking and look up a group that helps them"
+  ]
+ },
+ {
+  "id": "lourdes",
+  "name": "Our Lady of Lourdes",
+  "rank": "optional",
+  "blurb": "Mary appears to Bernadette at a French grotto in 1858.",
+  "on": "02-11",
+  "story": "Bernadette, a poor and sickly teenager, saw a lady who asked her to dig for a spring. Pilgrims still go to Lourdes for its waters and healing, and it's now World Day of the Sick.",
+  "food": [
+   "French crepes or quiche",
+   "A French-style picnic"
+  ],
+  "do": [
+   "Pray for someone who is sick",
+   "Visit a local shrine or grotto",
+   "Pray for someone who's sick",
+   "Make a small family pilgrimage"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "The Rosary"
+  ]
+ },
+ {
+  "id": "cyril-methodius",
+  "name": "Saints Cyril and Methodius",
+  "rank": "memorial",
+  "blurb": "Brothers who brought the Gospel and an alphabet to the Slavs.",
+  "on": "02-14",
+  "story": "Two brothers from Thessalonica went to the Slavic peoples, created an alphabet, and translated the liturgy into their language.",
+  "food": [
+   "Pierogi or cabbage rolls"
+  ],
+  "do": [
+   "Learn a few letters of the Cyrillic alphabet"
+  ]
+ },
+ {
+  "id": "valentine",
+  "name": "Saint Valentine",
+  "rank": "tradition",
+  "blurb": "A third-century martyr who gave his name to a day for love.",
+  "on": "02-14",
+  "story": "Little is known about Valentine except that he was a Roman martyr buried on the Flaminian Way, and medieval poets linked his day with love.",
+  "food": [
+   "Heart-shaped pizza or cookies"
+  ],
+  "do": [
+   "Slip anonymous valentines around the house",
+   "Make valentines for family and for someone lonely",
+   "Talk about what real love looks like",
+   "Turn the kitchen into a family bistro for the night"
+  ]
+ },
+ {
+  "id": "chair-peter",
+  "name": "The Chair of Saint Peter",
+  "rank": "feast",
+  "blurb": "A celebration of the pope's teaching office, begun with Peter.",
+  "on": "02-22",
+  "story": "The chair stands for the authority to teach. Rome has a real one, encased in bronze by Bernini at the back of St. Peter's.",
+  "food": [
+   "Cookies or candy built into little chairs"
+  ],
+  "do": [
+   "Write a letter to the Pope",
+   "Pray for him by name"
+  ],
+  "readings": [
+   "Matthew 16:13–20"
+  ]
+ },
+ {
+  "id": "perpetua",
+  "name": "Saints Perpetua and Felicity",
+  "rank": "memorial",
+  "blurb": "A young mother and a slave who died together as friends in Carthage.",
+  "on": "03-07",
+  "story": "Perpetua kept a prison diary, one of the oldest writings by a Christian woman. She paused in the arena to fix her hair, because she'd go to her death joyfully.",
+  "food": [
+   "Stracciatella, Roman egg drop soup"
+  ],
+  "do": [
+   "Try fancy hairdos",
+   "Pray for mothers and new moms"
+  ],
+  "prayers": [
+   "The Passion of Saints Perpetua and Felicity"
+  ]
+ },
+ {
+  "id": "frances-rome",
+  "name": "Saint Frances of Rome",
+  "rank": "optional",
+  "blurb": "A wife and mother who served Rome's poor, and is patron of drivers.",
+  "on": "03-09",
+  "story": "Frances ran a household, nursed plague victims, and founded a community for lay women. She saw her guardian angel for years, which is why she's patron of drivers.",
+  "food": [
+   "Teach a child to cook a simple recipe"
+  ],
+  "do": [
+   "Have the car blessed; she watches over drivers",
+   "Have everyone learn one home skill",
+   "Bless the car"
+  ]
+ },
+ {
+  "id": "shrove-tuesday",
+  "name": "Mardi Gras",
+  "rank": "tradition",
+  "blurb": "Fat Tuesday, the last big party before Lent begins.",
+  "story": "Before freezers, the rich foods had to be used up before the Lenten fast, which is how pancake suppers and carnival began. The joy of the feast makes the fast mean more.",
+  "food": [
+   "Swedish semla buns",
+   "Portuguese malasadas",
+   "Pancakes for dinner",
+   "King cake",
+   "Use up the sweets in the house",
+   "Paczki or jambalaya"
+  ],
+  "do": [
+   "Run a pancake race, as Olney, England has for centuries",
+   "Put on masks and beads",
+   "Write Alleluia on a sign or rock and get ready to bury it until Easter",
+   "Decide together what each person will do for Lent",
+   "Crown a King or Queen of Mardi Gras"
+  ]
+ },
+ {
+  "id": "ash-wednesday",
+  "name": "Ash Wednesday",
+  "rank": "principal",
+  "blurb": "Lent begins with ashes, fasting and a reminder of what really matters.",
+  "story": "Ashes on the forehead recall that life is short and God's mercy is long. Lent's forty days echo Jesus' time in the desert.",
+  "food": [
+   "Capirotada, the Mexican Lenten bread pudding",
+   "Soft pretzels, shaped like arms crossed in prayer",
+   "A plain meatless supper such as soup and bread"
+  ],
+  "do": [
+   "Spring Ember Days: Wednesday, Friday and Saturday after today",
+   "Bury the Alleluia",
+   "Set out a jar and start sacrifice beans, one for each kindness or sacrifice, to swap for jelly beans at Easter",
+   "Put away the extras and pick a simple Lenten practice"
+  ],
+  "readings": [
+   "Matthew 6:1–6, 16–18"
+  ]
+ },
+ {
+  "id": "patrick",
+  "name": "Saint Patrick",
+  "rank": "optional",
+  "blurb": "The former slave who brought the faith back to Ireland.",
+  "on": "03-17",
+  "story": "Kidnapped from Britain as a teenager, Patrick escaped, became a priest and returned to the people who had enslaved him. The shamrock is his simple picture of the Trinity.",
+  "food": [
+   "Colcannon",
+   "Soda bread and Irish cheeses",
+   "Corned beef and cabbage",
+   "Shepherd's pie"
+  ],
+  "do": [
+   "Throw a Hooley with singing and dancing",
+   "Build a leprechaun trap and leave chocolate coins",
+   "Pray St. Patrick's Breastplate",
+   "Use a shamrock to explain the Trinity"
+  ],
+  "prayers": [
+   "St. Patrick's Breastplate"
+  ]
+ },
+ {
+  "id": "joseph",
+  "name": "Saint Joseph",
+  "rank": "solemnity",
+  "blurb": "Husband of Mary, foster father of Jesus, and patron of the universal Church.",
+  "on": "03-19",
+  "story": "Joseph never says a word in the Gospels and does exactly what's needed. In Sicily, a famine answered by his intercession gave rise to St. Joseph's Tables of food shared with the poor.",
+  "food": [
+   "Fava beans, the lucky food of St. Joseph’s Table",
+   "Pasta with toasted breadcrumbs for carpenter’s sawdust",
+   "Zeppole",
+   "Pasta with breadcrumbs for sawdust",
+   "Zeppole pastries",
+   "Eat with your hands, the Italian way, for fun"
+  ],
+  "do": [
+   "Build a small St. Joseph’s Table with lilies and tool-shaped breads, then share it with people in need",
+   "Set up a St. Joseph's Table of food to share",
+   "Do some woodworking or fix something",
+   "Pray for fathers and workers"
+  ],
+  "readings": [
+   "Matthew 1:18–23"
+  ],
+  "prayers": [
+   "Litany of St. Joseph",
+   "Begin the Seven Sundays of St. Joseph beforehand"
+  ]
+ },
+ {
+  "id": "annunciation",
+  "name": "The Annunciation",
+  "rank": "solemnity",
+  "blurb": "Gabriel visits Mary, and God becomes man, nine months before Christmas.",
+  "on": "03-25",
+  "story": "Mary's yes is the hinge of history. It's a Solemnity in Lent, so the party's on.",
+  "food": [
+   "Fried cod with garlic sauce, the Greek dish for this day",
+   "Waffles for dinner, from an old Swedish pun on Lady Day"
+  ],
+  "do": [
+   "Pray the Angelus at noon",
+   "Decorate like a baby announcement, and put on a puppet show"
+  ],
+  "readings": [
+   "Luke 1:26–38"
+  ],
+  "prayers": [
+   "The Angelus"
+  ]
+ },
+ {
+  "id": "lent-4",
+  "name": "Laetare Sunday",
+  "rank": "principal",
+  "blurb": "Rejoice, Easter is getting closer, and the violet lightens to rose.",
+  "story": "Laetare means rejoice. In England it became Mothering Sunday, when people visited their mother church and their mothers.",
+  "food": [
+   "Simnel cake, the traditional Mothering Sunday cake",
+   "Simnel cake or anything a little more festive than usual Lenten fare",
+   "Pink cake"
+  ],
+  "do": [
+   "Bring flowers to your mother",
+   "Bring flowers to your mother or grandmother",
+   "Take a breather and enjoy Sunday",
+   "Wear pink"
+  ],
+  "readings": [
+   "Isaiah 66:10"
+  ]
+ },
+ {
+  "id": "lent-5",
+  "name": "Passion Sunday",
+  "rank": "tradition",
+  "blurb": "The last Sunday before Holy Week, once marked by veiling statues and crosses.",
+  "story": "Older calendars began Passiontide today, covering statues and crosses in church until Easter.",
+  "food": [
+   "Carlin peas, a Northern England custom for this Sunday",
+   "A purple dinner with beets, cabbage or grape juice"
+  ],
+  "do": [
+   "Veil the statues and crosses at home",
+   "Go to confession before Holy Week"
+  ],
+  "readings": [
+   "John 8:59"
+  ]
+ },
+ {
+  "id": "palm-sunday",
+  "name": "Palm Sunday",
+  "rank": "principal",
+  "blurb": "Jesus enters Jerusalem to shouts of welcome, and Holy Week begins.",
+  "story": "The same crowds who wave branches will soon turn away. Blessed palms are kept at home through the year, often tucked behind a crucifix.",
+  "food": [
+   "A simple meal, with the Holy Week spring cleaning starting after",
+   "Hearts of palm salad"
+  ],
+  "do": [
+   "Weave palm crosses, and save the palms to burn for next year’s ashes",
+   "Weave the blessed palms into crosses",
+   "Tuck palm behind the crucifixes at home",
+   "Clean the house together this week to get ready for Easter"
+  ],
+  "readings": [
+   "Mark 11:1–11"
+  ]
+ },
+ {
+  "id": "holy-thursday",
+  "name": "Holy Thursday",
+  "rank": "principal",
+  "blurb": "The Last Supper, the first Eucharist and the washing of the feet.",
+  "story": "Jesus gives the Eucharist and kneels to wash his friends' feet. After the evening Mass the bells go quiet until the Easter Vigil.",
+  "food": [
+   "Green foods like herb soup and spinach, for Germany’s Green Thursday",
+   "Jidáše, Czech honey rolls",
+   "A simple Last Supper meal of lamb, flatbread, herbs and grape juice",
+   "A lamb cake made from crispy rice treats"
+  ],
+  "do": [
+   "Visit several churches after Mass to pray, a custom linked to St. Philip Neri",
+   "Wash each other's feet at home",
+   "Keep the house quiet from tonight on",
+   "Watch The Prince of Egypt"
+  ],
+  "readings": [
+   "John 13:1–20",
+   "Matthew 26:17–29"
+  ],
+  "prayers": [
+   "Tantum Ergo"
+  ],
+  "indulgence": "Plenary when the Tantum Ergo is prayed solemnly today."
+ },
+ {
+  "id": "good-friday",
+  "name": "Good Friday",
+  "rank": "principal",
+  "blurb": "The Lord's Passion and death, kept with fasting and quiet.",
+  "story": "The one day of the year with no Mass at all. Many families keep the noon to three o'clock hours as quietly as they can.",
+  "food": [
+   "Hot cross buns",
+   "A plain meatless meal",
+   "A fish fry"
+  ],
+  "do": [
+   "Pray the Stations of the Cross at home with fourteen small crosses",
+   "Go without screens and music",
+   "Keep three o'clock as a moment of silence",
+   "Wear black",
+   "Start the Divine Mercy Novena"
+  ],
+  "readings": [
+   "Mark 14:26–15:27"
+  ],
+  "prayers": [
+   "Prayer before a Crucifix",
+   "Stations of the Cross",
+   "Begin the Divine Mercy Novena"
+  ],
+  "indulgence": "Plenary for taking part in the Adoration of the Cross at the Good Friday liturgy. On any Friday of Lent, the Prayer before a Crucifix after Communion is also plenary."
+ },
+ {
+  "id": "holy-saturday",
+  "name": "Holy Saturday",
+  "rank": "principal",
+  "blurb": "The quiet day of waiting at the tomb, ending at the Easter Vigil.",
+  "story": "The Church waits without any celebrations until darkness falls and the new fire is lit at the Vigil.",
+  "food": [
+   "A Polish Święconka basket of bread, eggs, ham, salt and horseradish",
+   "Bake Easter bread",
+   "Prepare a basket of Easter foods to be blessed",
+   "Soft pretzels"
+  ],
+  "do": [
+   "Take your Easter food to church to be blessed",
+   "Dye the eggs",
+   "Fill the Easter baskets",
+   "Set out the Easter clothes"
+  ]
+ },
+ {
+  "id": "easter",
+  "name": "Easter Sunday",
+  "rank": "principal",
+  "blurb": "Christ is risen! The greatest day of the Christian year.",
+  "story": "The empty tomb is the center of the faith, and the party lasts for eight days and then fifty. Alleluia comes back.",
+  "food": [
+   "Greek tsoureki",
+   "A butter lamb, the Polish table centerpiece",
+   "Ham or lamb",
+   "A lamb-shaped cake",
+   "Hot cross buns and all the sweets you gave up",
+   "Braided Easter bread",
+   "Shrimp and ham, celebrating every food the new covenant allows"
+  ],
+  "do": [
+   "Dig up the Alleluia",
+   "Trade sacrifice beans for jelly beans",
+   "Have an egg hunt",
+   "Greet each other with Christ is risen and answer He is risen indeed",
+   "Invite someone who would otherwise be alone"
+  ],
+  "readings": [
+   "John 20:1–23"
+  ],
+  "prayers": [
+   "O Filii et Filiae",
+   "Jesus Christ Is Risen Today"
+  ],
+  "indulgence": "Plenary for devoutly receiving the Pope's Urbi et Orbi blessing, even by television or radio."
+ },
+ {
+  "id": "easter-monday",
+  "name": "Easter Monday",
+  "rank": "solemnity",
+  "blurb": "Easter keeps going, with the Octave's second day.",
+  "story": "In Poland it's Wet Monday, when people splash each other with water, a playful reminder of baptism.",
+  "food": [
+   "Easter leftovers"
+  ],
+  "do": [
+   "Splash each other with water for Dyngus Day, the Polish custom",
+   "Have a picnic, as Italians do for Pasquetta",
+   "Have a water fight, or at least a very small splash"
+  ],
+  "prayers": [
+   "Regina Caeli"
+  ]
+ },
+ {
+  "id": "easter-tuesday",
+  "name": "Easter Tuesday",
+  "rank": "solemnity",
+  "blurb": "Day three of the eight-day Easter celebration.",
+  "do": [
+   "Greet each other with He is risen, and answer He is risen indeed",
+   "Pray the Regina Caeli"
+  ],
+  "prayers": [
+   "Regina Caeli"
+  ]
+ },
+ {
+  "id": "easter-wednesday",
+  "name": "Easter Wednesday",
+  "rank": "solemnity",
+  "blurb": "Still Easter, with the Octave rolling on.",
+  "do": [
+   "Greet each other with He is risen, and answer He is risen indeed",
+   "Pray the Regina Caeli"
+  ],
+  "prayers": [
+   "Regina Caeli"
+  ]
+ },
+ {
+  "id": "easter-thursday",
+  "name": "Easter Thursday",
+  "rank": "solemnity",
+  "blurb": "Still Easter, one more day of feasting.",
+  "do": [
+   "Greet each other with He is risen, and answer He is risen indeed",
+   "Pray the Regina Caeli"
+  ],
+  "prayers": [
+   "Regina Caeli"
+  ]
+ },
+ {
+  "id": "easter-friday",
+  "name": "Easter Friday",
+  "rank": "solemnity",
+  "blurb": "A Friday without penance, because Easter outranks it.",
+  "story": "Every day of the Easter Octave counts as a solemnity, so meat is back on the table on the one Friday when it's easy to forget.",
+  "food": [
+   "Burgers or steak, because it's a meat Friday"
+  ],
+  "prayers": [
+   "Regina Caeli"
+  ]
+ },
+ {
+  "id": "easter-saturday",
+  "name": "Easter Saturday",
+  "rank": "solemnity",
+  "blurb": "The last weekday of the Easter Octave.",
+  "do": [
+   "Greet each other with He is risen, and answer He is risen indeed",
+   "Pray the Regina Caeli"
+  ],
+  "prayers": [
+   "Regina Caeli"
+  ]
+ },
+ {
+  "id": "divine-mercy",
+  "name": "Divine Mercy Sunday",
+  "rank": "principal",
+  "blurb": "The Sunday after Easter, on God's mercy, as revealed to St. Faustina.",
+  "story": "St. Faustina Kowalska's visions of Christ led St. John Paul II to name this Sunday in 2000. Many parishes offer the Chaplet at three in the afternoon.",
+  "food": [
+   "Finish the Easter sweets",
+   "Heart-shaped waffles"
+  ],
+  "do": [
+   "Pray the Divine Mercy Chaplet at three",
+   "Go to confession around this time"
+  ],
+  "prayers": [
+   "Chaplet of Divine Mercy"
+  ],
+  "indulgence": "Plenary for taking part in Divine Mercy devotions in a church, or for praying the Our Father, the Creed and a prayer such as “Merciful Jesus, I trust in you!” before the Blessed Sacrament."
+ },
+ {
+  "id": "george",
+  "name": "Saint George",
+  "rank": "optional",
+  "blurb": "The soldier-martyr of the dragon story and patron of England.",
+  "on": "04-23",
+  "story": "Almost nothing is known about the real George except that he died for the faith. The dragon story stuck because everyone understands what it is to fight a monster.",
+  "food": [
+   "Bangers and mash",
+   "A dragon-shaped cake",
+   "A fruit crumble marked with a St. George's Cross"
+  ],
+  "do": [
+   "Give someone a rose and a book, as Catalonia does for Sant Jordi",
+   "Dress as knights and ladies",
+   "Have a dragon hunt",
+   "Talk about what dragons you'd like to slay",
+   "Stage cardboard sword fights"
+  ]
+ },
+ {
+  "id": "mark",
+  "name": "Saint Mark",
+  "rank": "feast",
+  "blurb": "Writer of the shortest Gospel, symbolized by a lion.",
+  "on": "04-25",
+  "story": "Tradition makes Mark the companion of Peter and founder of the Church in Alexandria. Venice has claimed him since his relics arrived in the 800s.",
+  "food": [
+   "Risi e bisi, the rice and peas of Venice",
+   "Venetian rice and peas, risi e bisi",
+   "A lion's head veggie pizza"
+  ],
+  "do": [
+   "Give someone a rosebud, a Venetian custom for this day",
+   "Read a chapter of Mark's Gospel out loud",
+   "Draw a winged lion",
+   "Walk the neighborhood and pray for the people who live there, an old Rogation custom"
+  ],
+  "readings": [
+   "Mark 14:48–52"
+  ],
+  "prayers": [
+   "Litany of the Saints"
+  ]
+ },
+ {
+  "id": "gianna",
+  "name": "Saint Gianna Molla",
+  "rank": "tradition",
+  "blurb": "An Italian doctor and mother who gave her life for her unborn child.",
+  "on": "04-28",
+  "story": "Gianna was a pediatrician, wife and mother who loved skiing and fashion. She chose treatment that protected her baby and died a week after her daughter's birth.",
+  "food": [
+   "Italian food",
+   "Takeout, so mom doesn't cook"
+  ],
+  "do": [
+   "Pray for mothers and doctors",
+   "Give the moms a night out"
+  ]
+ },
+ {
+  "id": "catherine-siena",
+  "name": "Saint Catherine of Siena",
+  "rank": "memorial",
+  "blurb": "A wool-dyer's daughter who told popes what to do.",
+  "on": "04-29",
+  "story": "The twenty-fourth of twenty-five children, Catherine nursed plague victims, dictated a book, and persuaded the pope to leave Avignon for Rome. She's a Doctor of the Church.",
+  "food": [
+   "Italian food and something lovely for the table",
+   "Tiramisu"
+  ],
+  "do": [
+   "Write an honest, loving letter to someone in charge"
+  ]
+ },
+ {
+  "id": "joseph-worker",
+  "name": "Saint Joseph the Worker",
+  "rank": "optional",
+  "blurb": "Honoring work and workers on May Day.",
+  "on": "05-01",
+  "story": "Pius XII set this feast in 1955 as a response to communist May Day rallies, naming a carpenter as the model of working people.",
+  "food": [
+   "Sandwiches in lunch pails",
+   "Pasta"
+  ],
+  "do": [
+   "Do a home project together",
+   "Thank someone for their work"
+  ],
+  "prayers": [
+   "Litany of St. Joseph"
+  ]
+ },
+ {
+  "id": "fatima",
+  "name": "Our Lady of Fatima",
+  "rank": "optional",
+  "blurb": "Mary appears to three shepherd children in Portugal in 1917.",
+  "on": "05-13",
+  "story": "Lucia, Francisco and Jacinta were asked to pray the Rosary for peace. Some 70,000 saw the sun appear to dance that October.",
+  "food": [
+   "Pastéis de nata, Portuguese custard tarts",
+   "Portuguese sweet bread or custard tarts",
+   "Cupcakes decorated like a dancing sun"
+  ],
+  "do": [
+   "Hold a candlelit rosary walk",
+   "Pray the Rosary together",
+   "Act out the story"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "The Rosary"
+  ]
+ },
+ {
+  "id": "magallanes",
+  "name": "Saint Christopher Magallanes and Companions",
+  "rank": "optional",
+  "blurb": "Priests and laymen martyred during the Mexican persecution of the 1920s.",
+  "on": "05-21",
+  "story": "Mexico's government closed churches in the 1920s and these martyrs kept serving in secret. Father Magallanes forgave his executioners as he died.",
+  "food": [
+   "Tacos and Mexican Coke",
+   "Tres leches cake"
+  ],
+  "do": [
+   "Pray for persecuted Christians",
+   "Watch or read about the Cristero War with older kids",
+   "Whack a pinata"
+  ]
+ },
+ {
+  "id": "rita",
+  "name": "Saint Rita of Cascia",
+  "rank": "optional",
+  "blurb": "Patron of impossible causes, a wife, mother and Augustinian nun.",
+  "on": "05-22",
+  "story": "Rita endured a hard marriage and the loss of her family before entering a convent. Baseball fans know her from The Rookie, whose real-life story has a Rita connection.",
+  "food": [
+   "Hot dogs at a ballgame"
+  ],
+  "do": [
+   "Bring roses to be blessed",
+   "Go to a baseball game, or watch The Rookie",
+   "Pray for someone in a tough spot"
+  ]
+ },
+ {
+  "id": "joan",
+  "name": "Saint Joan of Arc",
+  "rank": "tradition",
+  "blurb": "The French peasant girl who led an army, patron of France.",
+  "on": "05-30",
+  "story": "Joan was still a teenager when she persuaded the Dauphin to let her lead his troops. Burned at nineteen, she was declared a saint centuries later.",
+  "food": [
+   "Croque madame",
+   "Torched creme brulee"
+  ],
+  "do": [
+   "Learn the story",
+   "Make a paper banner"
+  ]
+ },
+ {
+  "id": "visitation",
+  "name": "The Visitation",
+  "rank": "feast",
+  "blurb": "Pregnant Mary visits Elizabeth, and John leaps for joy.",
+  "on": "05-31",
+  "story": "The Magnificat is Mary's song of praise on this visit, and she stayed three months to help.",
+  "food": [
+   "White food or waffles",
+   "Bring a meal to someone expecting"
+  ],
+  "do": [
+   "Pray the Magnificat",
+   "Deliver a casserole to a new or expectant mom"
+  ],
+  "readings": [
+   "Luke 1:39–56"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "Hail Mary",
+   "Magnificat"
+  ]
+ },
+ {
+  "id": "ascension",
+  "name": "The Ascension of the Lord",
+  "rank": "solemnity",
+  "blurb": "Forty days after Easter, Jesus returns to the Father.",
+  "story": "Jesus blesses his friends, rises out of sight, and tells them to wait for the Spirit. The nine days after were the first novena.",
+  "food": [
+   "Any bird, an old European nod to the day",
+   "Popovers, which rise up and are empty inside"
+  ],
+  "do": [
+   "Begin the Pentecost novena",
+   "Fly a kite",
+   "Climb a hill and have a picnic"
+  ],
+  "readings": [
+   "Acts 1:6–11"
+  ],
+  "prayers": [
+   "Begin the Pentecost Novena"
+  ]
+ },
+ {
+  "id": "pentecost",
+  "name": "Pentecost Sunday",
+  "rank": "principal",
+  "blurb": "The Holy Spirit comes in wind and fire, and Easter season ends.",
+  "story": "Frightened disciples burst out into the streets speaking every language, and the Church goes public.",
+  "food": [
+   "Anything red",
+   "Something spicy",
+   "Birthday cake for the Church",
+   "Donuts and hot dogs by the fire"
+  ],
+  "do": [
+   "Scatter red rose petals, as they do through the roof of Rome’s Pantheon",
+   "Summer Ember Days: Wednesday, Friday and Saturday after today",
+   "Have a backyard bonfire",
+   "Wear red",
+   "Hang red streamers or paper flames",
+   "Pin paper flames on pictures of the Apostles"
+  ],
+  "readings": [
+   "Acts 2:1–4"
+  ],
+  "prayers": [
+   "Come, Holy Spirit",
+   "Veni Creator Spiritus"
+  ],
+  "indulgence": "Plenary when the Veni Creator is prayed today."
+ },
+ {
+  "id": "mary-mother-church",
+  "name": "Mary, Mother of the Church",
+  "rank": "memorial",
+  "blurb": "The day after Pentecost honors Mary as mother of all believers.",
+  "story": "Pope Francis added this memorial to the calendar in 2018, on the Monday after Pentecost, remembering Mary in the upper room with the first Christians.",
+  "food": [
+   "A homey meal like meatloaf and apple pie"
+  ],
+  "do": [
+   "Pray a Rosary together"
+  ],
+  "prayers": [
+   "The Rosary",
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "trinity",
+  "name": "The Most Holy Trinity",
+  "rank": "solemnity",
+  "blurb": "One God in three Persons.",
+  "story": "No analogy quite works, as St. Patrick's shamrock cheerfully shows. The feast celebrates a God who is a relationship of love at his very center.",
+  "food": [
+   "Anything in threes, such as three-meat chili",
+   "Cloverleaf rolls",
+   "Neapolitan ice cream"
+  ],
+  "do": [
+   "Draw a shamrock or triangle",
+   "Pray the Glory Be slowly together"
+  ],
+  "prayers": [
+   "Athanasian Creed",
+   "Glory Be"
+  ]
+ },
+ {
+  "id": "corpus-christi",
+  "name": "Corpus Christi",
+  "rank": "solemnity",
+  "blurb": "The Body and Blood of Christ, honored with processions through the streets.",
+  "story": "St. Juliana of Liege's devotion and St. Thomas Aquinas' hymns gave this feast its shape, and many towns still carpet streets with flowers.",
+  "food": [
+   "Homemade bread",
+   "A Last Supper style dinner"
+  ],
+  "do": [
+   "Lay out a flower carpet on the front walk, like Italy’s infiorate",
+   "Join a parish Eucharistic procession",
+   "Stop in for adoration",
+   "Start making the Sign of the Cross when you pass a Catholic church"
+  ],
+  "readings": [
+   "John 6:52–59"
+  ],
+  "prayers": [
+   "Act of Spiritual Communion",
+   "Tantum Ergo"
+  ],
+  "indulgence": "Plenary when the Tantum Ergo is prayed solemnly today."
+ },
+ {
+  "id": "sacred-heart",
+  "name": "The Most Sacred Heart of Jesus",
+  "rank": "solemnity",
+  "blurb": "A Friday solemnity honoring Jesus' love, so meat is on the menu.",
+  "story": "St. Margaret Mary Alacoque's visions spread this devotion far and wide. Because it's a solemnity, the usual Friday penance gives way.",
+  "food": [
+   "Steak or another meat feast",
+   "A heart-shaped cake",
+   "Cherry pie",
+   "A red Jell-O heart"
+  ],
+  "do": [
+   "Enthrone or bless a Sacred Heart image at home",
+   "Pray the Litany of the Sacred Heart"
+  ],
+  "prayers": [
+   "Act of Reparation to the Sacred Heart"
+  ],
+  "indulgence": "Plenary when the Act of Reparation is prayed publicly today."
+ },
+ {
+  "id": "immaculate-heart",
+  "name": "The Immaculate Heart of Mary",
+  "rank": "memorial",
+  "blurb": "The day after the Sacred Heart, honoring Mary's love for God.",
+  "story": "Mary kept all these things in her heart, Luke tells us. Our Lady of Fatima asked for devotion to her Immaculate Heart.",
+  "food": [
+   "Heart-shaped food, or white food and waffles"
+  ],
+  "prayers": [
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "anthony-padua",
+  "name": "Saint Anthony of Padua",
+  "rank": "memorial",
+  "blurb": "The Franciscan preacher who helps find what's lost.",
+  "on": "06-13",
+  "story": "Anthony was so gifted a preacher that legend says even the fish came to listen. Tony, Tony, look around is a prayer many Catholic kids know.",
+  "food": [
+   "Grilled sardines, as Lisbon does",
+   "St. Anthony's bread, baked and shared with the poor"
+  ],
+  "do": [
+   "Give someone a pot of basil with a little note, Lisbon style",
+   "Give bread or money to the poor as St. Anthony’s Bread",
+   "Keep a St. Anthony box for lost and found things, and let kids ransom their stuff with a chore or small coin",
+   "Pray when something is lost"
+  ]
+ },
+ {
+  "id": "fisher-more",
+  "name": "Saints John Fisher and Thomas More",
+  "rank": "optional",
+  "blurb": "A bishop and a lawyer who refused to bend to Henry VIII.",
+  "on": "06-22",
+  "story": "More was the king's chancellor and a witty family man. He told the crowd he died the king's good servant, but God's first.",
+  "food": [
+   "Fish and s'mores, for Fisher and More"
+  ],
+  "do": [
+   "Watch or read A Man for All Seasons with older kids",
+   "Pray for those in public service"
+  ]
+ },
+ {
+  "id": "john-baptist",
+  "name": "The Birth of Saint John the Baptist",
+  "rank": "solemnity",
+  "blurb": "The forerunner's birthday, exactly six months before Christmas.",
+  "on": "06-24",
+  "story": "John's birth falls near the summer solstice, as the days begin shrinking, because he must decrease so Christ can increase. The Church has a blessing for St. John's bonfires.",
+  "food": [
+   "Finnish pancakes on the eve",
+   "Picnic food, with honey and locusts if you're brave",
+   "Grilled chicken with honey glaze",
+   "Grasshopper pie"
+  ],
+  "do": [
+   "Light a bonfire on the eve",
+   "Bless the fire",
+   "Have a family cookout"
+  ],
+  "readings": [
+   "Luke 1:57–80"
+  ]
+ },
+ {
+  "id": "josemaria",
+  "name": "Saint Josemaria Escriva",
+  "rank": "tradition",
+  "blurb": "A Spanish priest who taught that ordinary work can be holy.",
+  "on": "06-26",
+  "story": "A Spanish priest who founded Opus Dei, he taught that ordinary jobs and family life are a path to holiness.",
+  "food": [
+   "Paella and flan"
+  ],
+  "do": [
+   "Pick one daily chore and offer it up"
+  ]
+ },
+ {
+  "id": "peter-paul",
+  "name": "Saints Peter and Paul",
+  "rank": "solemnity",
+  "blurb": "The two pillars of the Church in Rome.",
+  "on": "06-29",
+  "story": "The fisherman and the tentmaker were both martyred in Rome and share a single day. Tradition says Peter was crucified upside down, and Paul was beheaded.",
+  "food": [
+   "Fish for Peter and something woven like braided bread for Paul the tentmaker",
+   "Cookie tents and candy fish"
+  ],
+  "do": [
+   "Visit a cathedral or basilica and pray an Our Father and the Creed",
+   "Pray for the Pope",
+   "Go camping or fishing"
+  ],
+  "readings": [
+   "Matthew 16:13–19"
+  ],
+  "prayers": [
+   "Holy Apostles Peter and Paul, intercede for us"
+  ],
+  "indulgence": "Plenary for using an article of devotion blessed by the Pope or a bishop, with a profession of faith."
+ },
+ {
+  "id": "kateri",
+  "name": "Saint Kateri Tekakwitha",
+  "rank": "memorial",
+  "blurb": "The Lily of the Mohawks, first Native American saint.",
+  "on": "07-14",
+  "story": "Scarred by smallpox and rejected for converting, Kateri fled to a Christian community near Montreal. Her face was said to clear when she died at 24.",
+  "food": [
+   "Corn soup or succotash, traditional foods of her people",
+   "Three sisters stew of corn, beans and squash",
+   "Fry bread"
+  ],
+  "do": [
+   "Take a walk outside and pray",
+   "Make a simple cross of sticks"
+  ]
+ },
+ {
+  "id": "carmel",
+  "name": "Our Lady of Mount Carmel",
+  "rank": "optional",
+  "blurb": "Patroness of the Carmelites and of the Brown Scapular.",
+  "on": "07-16",
+  "story": "Carmelite tradition says Mary gave the scapular to St. Simon Stock in the 1200s. It's a small sign of being under her care.",
+  "food": [
+   "A brown-and-white dessert like brownies or tiramisu"
+  ],
+  "do": [
+   "Get enrolled in the scapular",
+   "Learn about Mount Carmel"
+  ],
+  "prayers": [
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "magdalene",
+  "name": "Saint Mary Magdalene",
+  "rank": "feast",
+  "blurb": "The first witness of the Resurrection, called Apostle to the Apostles.",
+  "on": "07-22",
+  "story": "Mary Magdalene stayed at the cross and came to the tomb. An old story has her telling the emperor about the Resurrection, holding up an egg that turned red.",
+  "food": [
+   "A spice-filled meal for the spices she brought to the tomb"
+  ],
+  "do": [
+   "Dye eggs red",
+   "Tell someone good news",
+   "Play an egg-tapping game"
+  ],
+  "readings": [
+   "John 20:1–2, 11–18"
+  ]
+ },
+ {
+  "id": "bridget",
+  "name": "Saint Bridget of Sweden",
+  "rank": "optional",
+  "blurb": "A Swedish mother of eight and founder of an order.",
+  "on": "07-23",
+  "story": "Bridget raised a big family and advised kings before founding the Bridgettines. One of her daughters, Catherine, also became a saint.",
+  "food": [
+   "Swedish meatballs",
+   "Lingonberry jam and Swedish Fish"
+  ],
+  "do": [
+   "Learn a few words of Swedish"
+  ]
+ },
+ {
+  "id": "joachim-anne",
+  "name": "Saints Joachim and Anne",
+  "rank": "memorial",
+  "blurb": "Mary's parents, and the patrons of grandparents.",
+  "on": "07-26",
+  "story": "Scripture doesn't name them, but early Christian tradition does. Their feast is the perfect day to call the grandparents.",
+  "food": [
+   "A grandparent's recipe",
+   "Share a meal with a grandparent or elderly neighbor",
+   "Florentine lace cookies"
+  ],
+  "do": [
+   "Visit or call a grandparent",
+   "Have grandparents tell stories about when they were young"
+  ]
+ },
+ {
+  "id": "transfiguration",
+  "name": "The Transfiguration of the Lord",
+  "rank": "lord",
+  "blurb": "Jesus shines with glory on the mountain before Peter, James and John.",
+  "on": "08-06",
+  "story": "Peter wanted to stay up there forever. It's a preview of what's coming, so in many places grapes and first fruits are blessed today.",
+  "food": [
+   "Fresh grapes",
+   "Grapes and something bright and shining",
+   "Toad in the hole, or leftovers transformed into something new"
+  ],
+  "do": [
+   "Have fruit blessed, an Eastern Christian custom",
+   "Talk about what you hope heaven's like",
+   "Climb a hill"
+  ],
+  "readings": [
+   "Mark 9:2–8"
+  ]
+ },
+ {
+  "id": "lawrence",
+  "name": "Saint Lawrence",
+  "rank": "feast",
+  "blurb": "The deacon of Rome known for grilling humor and care for the poor.",
+  "on": "08-10",
+  "story": "Told to bring the Church's treasures, Lawrence brought the poor. Tradition says he joked from the gridiron, which is why he's patron of cooks and comedians.",
+  "food": [
+   "Grill out, of course"
+  ],
+  "do": [
+   "Stay up for the Perseid meteors, nicknamed the Tears of St. Lawrence",
+   "Tell jokes at dinner",
+   "Go out and watch the Perseid meteors, the Tears of St. Lawrence",
+   "Hold a family comedy showcase"
+  ]
+ },
+ {
+  "id": "clare",
+  "name": "Saint Clare",
+  "rank": "memorial",
+  "blurb": "Friend of St. Francis and founder of the Poor Clares, patron of television.",
+  "on": "08-11",
+  "story": "Too sick to attend Mass one Christmas, Clare reportedly saw and heard it on her wall, which is why she's the patron of TV.",
+  "food": [
+   "Pizza and a family movie",
+   "Eclairs"
+  ],
+  "do": [
+   "Have a family movie night, honoring her TV patronage",
+   "Give away something you don't need"
+  ]
+ },
+ {
+  "id": "assumption",
+  "name": "The Assumption of Mary",
+  "rank": "solemnity",
+  "blurb": "Mary is taken body and soul into heaven.",
+  "on": "08-15",
+  "story": "Blessing herbs today is an old custom in much of Europe, and there's a fragrant story of flowers filling her empty tomb.",
+  "food": [
+   "Grapes, first blessed today in Armenian churches",
+   "Watermelon, for Italy’s Ferragosto",
+   "Herb-roasted chicken and watermelon salad with fresh herbs",
+   "White food or waffles"
+  ],
+  "do": [
+   "Bring fruit and herbs to be blessed",
+   "Bring herbs and flowers to be blessed",
+   "Have a small Marian procession around the yard, singing and ending at a statue",
+   "Dry herbs and sew a small sachet"
+  ],
+  "readings": [
+   "Luke 1:39–56"
+  ],
+  "prayers": [
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "queenship",
+  "name": "The Queenship of Mary",
+  "rank": "memorial",
+  "blurb": "An octave after the Assumption, Mary is honored as Queen.",
+  "on": "08-22",
+  "story": "Pius XII set this memorial in 1954. In the kings of Judah, the queen was the king's mother, which helps explain this title.",
+  "food": [
+   "White food or waffles",
+   "A crown-shaped dessert",
+   "Queen cakes and coronation chicken sandwiches"
+  ],
+  "do": [
+   "Crown a statue of Mary with flowers",
+   "Have a Marian tea party"
+  ],
+  "prayers": [
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "bartholomew",
+  "name": "Saint Bartholomew",
+  "rank": "feast",
+  "blurb": "An Apostle often identified with Nathanael, and patron of leatherworkers.",
+  "on": "08-24",
+  "story": "Bartholomew reportedly took the Gospel to India and Armenia and was martyred. Tradition says he was skinned alive, so peeled apples are a slightly gruesome family joke.",
+  "food": [
+   "Apple dishes with the skin peeled away",
+   "Applesauce and skinless chicken"
+  ],
+  "do": [
+   "Peel an apple all in one piece"
+  ],
+  "readings": [
+   "John 1:45–51"
+  ]
+ },
+ {
+  "id": "monica",
+  "name": "Saint Monica",
+  "rank": "memorial",
+  "blurb": "The persistent, praying mother of St. Augustine.",
+  "on": "08-27",
+  "story": "Monica prayed for years that Augustine would change. A bishop told her a child of so many tears could not be lost.",
+  "food": [
+   "A good North African dish like couscous",
+   "Tagine"
+  ],
+  "do": [
+   "Pray for someone who has left the faith",
+   "Thank your mom"
+  ]
+ },
+ {
+  "id": "augustine",
+  "name": "Saint Augustine",
+  "rank": "memorial",
+  "blurb": "The restless young man who became the great bishop of Hippo.",
+  "on": "08-28",
+  "story": "Augustine's Confessions tells of his wandering and conversion. His line about our hearts being restless until they rest in God is still quoted.",
+  "food": [
+   "Couscous or dates",
+   "Pears, for the pears he famously stole"
+  ],
+  "do": [
+   "Read a page of the Confessions",
+   "Own up to something you did wrong",
+   "Dig a hole at the beach, after the story of the child he met by the sea"
+  ],
+  "prayers": [
+   "Holy Spirit Prayer of St. Augustine"
+  ]
+ },
+ {
+  "id": "john-passion",
+  "name": "The Passion of Saint John the Baptist",
+  "rank": "memorial",
+  "blurb": "John is martyred at Herod's order.",
+  "on": "08-29",
+  "story": "Herod had John arrested for speaking the truth, then ordered his death to keep a promise made at a party.",
+  "food": [
+   "A head of lettuce on a platter, and lettuce wraps"
+  ],
+  "do": [
+   "Act out the story, if your kids can take it"
+  ],
+  "readings": [
+   "Mark 6:14–29"
+  ]
+ },
+ {
+  "id": "teresa-calcutta",
+  "name": "Saint Teresa of Calcutta",
+  "rank": "optional",
+  "blurb": "Tiny, tireless servant of the poorest of the poor.",
+  "on": "09-05",
+  "story": "Mother Teresa left a teaching job to serve the dying in Calcutta's streets, and her Missionaries of Charity now span the world.",
+  "food": [
+   "An Indian curry",
+   "Or a meal delivered to someone in need",
+   "White Jell-O with blue stripes, for her sari"
+  ],
+  "do": [
+   "Serve at a soup kitchen",
+   "Do something small with great love",
+   "Pray for the poor and give something to help"
+  ]
+ },
+ {
+  "id": "nativity-mary",
+  "name": "The Nativity of Mary",
+  "rank": "feast",
+  "blurb": "Mary's birthday, nine months after her Immaculate Conception.",
+  "on": "09-08",
+  "story": "The Church celebrates only three birthdays: Jesus, Mary, and John the Baptist. A blue cake is right for a queen.",
+  "food": [
+   "Blue-corn nachos and blueberry cornbread",
+   "A birthday cake with blue frosting"
+  ],
+  "do": [
+   "Sing Happy Birthday to Mary",
+   "Decorate in blue"
+  ],
+  "readings": [
+   "Matthew 1:18–23"
+  ],
+  "prayers": [
+   "Litany of Loreto"
+  ]
+ },
+ {
+  "id": "holy-cross",
+  "name": "The Exaltation of the Holy Cross",
+  "rank": "lord",
+  "blurb": "Honoring the Cross as the sign of victory.",
+  "on": "09-14",
+  "story": "St. Helena is said to have found the True Cross in Jerusalem, and this feast recalls the dedication of the church built there.",
+  "food": [
+   "Cross-shaped hot rolls",
+   "Basil, said to have grown where the Cross was found",
+   "Caprese salad or pesto pasta"
+  ],
+  "do": [
+   "Take home a sprig of basil, as Greek parishes do",
+   "Fall Ember Days: Wednesday, Friday and Saturday after today",
+   "Make crosses from sticks and twine",
+   "Say a slow Sign of the Cross together"
+  ],
+  "readings": [
+   "1 Corinthians 1:23–25"
+  ],
+  "prayers": [
+   "Prayer before a Crucifix"
+  ]
+ },
+ {
+  "id": "sorrows",
+  "name": "Our Lady of Sorrows",
+  "rank": "memorial",
+  "blurb": "Mary's seven sorrows, the day after the Holy Cross.",
+  "on": "09-15",
+  "story": "Simeon told Mary a sword would pierce her heart, and the seven sorrows follow the story through to the tomb.",
+  "food": [
+   "Sour candies"
+  ],
+  "do": [
+   "Hand out seven sour candies, and read a verse on each sorrow while sticking a toothpick into a play-dough heart"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "Seven Sorrows of Mary"
+  ]
+ },
+ {
+  "id": "matthew",
+  "name": "Saint Matthew",
+  "rank": "feast",
+  "blurb": "The tax collector who followed Jesus and wrote a Gospel.",
+  "on": "09-21",
+  "story": "Jesus called a despised tax man to be an Apostle, and Matthew threw a party to introduce his friends.",
+  "food": [
+   "Silver dollar pancakes",
+   "A big dinner for friends who don't know each other"
+  ],
+  "do": [
+   "Count coins and give some to the poor",
+   "Play a math game"
+  ],
+  "readings": [
+   "Matthew 9:9–13"
+  ]
+ },
+ {
+  "id": "michaelmas",
+  "name": "Michaelmas",
+  "rank": "feast",
+  "blurb": "Saints Michael, Gabriel and Raphael, the archangels.",
+  "on": "09-29",
+  "story": "Michael is the warrior who threw out the devil. In old folk tales, the devil fell into a blackberry bramble and cursed it, so people picked blackberries before this day.",
+  "food": [
+   "Struan Micheil, the Scottish St. Michael’s bannock",
+   "Roast goose",
+   "Roast goose or chicken",
+   "Blackberry pie or cobbler",
+   "Carrots",
+   "Deviled eggs and angel food cake"
+  ],
+  "do": [
+   "Hide a ring in a pie, an old Irish custom",
+   "Whack a devil pinata",
+   "Pray the St. Michael Prayer"
+  ],
+  "readings": [
+   "Revelation 12:7–9"
+  ],
+  "prayers": [
+   "St. Michael Prayer"
+  ]
+ },
+ {
+  "id": "therese",
+  "name": "Saint Therese of Lisieux",
+  "rank": "memorial",
+  "blurb": "The Little Flower, who taught the little way of love.",
+  "on": "10-01",
+  "story": "She died at 24 in a French convent and her autobiography changed millions of lives. She promised to spend heaven doing good on earth and letting fall a shower of roses.",
+  "food": [
+   "Rose water cookies, rose-shaped desserts"
+  ],
+  "do": [
+   "Do small things with great love",
+   "Buy or pick roses",
+   "Keep a string of sacrifice beads"
+  ]
+ },
+ {
+  "id": "guardian-angels",
+  "name": "The Guardian Angels",
+  "rank": "memorial",
+  "blurb": "Each person's angel, sent to guard and guide.",
+  "on": "10-02",
+  "story": "Jesus said the little ones have angels who see the Father's face. The Angel of God prayer is one of the first prayers children learn.",
+  "food": [
+   "Angel hair pasta",
+   "Angel food cake"
+  ],
+  "do": [
+   "Pray the Angel of God",
+   "Set an extra place at the table for your angel",
+   "Say good morning to your guardian angel"
+  ],
+  "readings": [
+   "Matthew 18:10"
+  ],
+  "prayers": [
+   "Guardian Angel Prayer"
+  ]
+ },
+ {
+  "id": "francis",
+  "name": "Saint Francis of Assisi",
+  "rank": "memorial",
+  "blurb": "The rich young man who gave it all away and loved all creatures.",
+  "on": "10-04",
+  "story": "Francis stripped off his fine clothes in the town square and went off to rebuild the Church. His Canticle of the Creatures sings of Brother Sun and Sister Moon.",
+  "food": [
+   "Italian food, and treats for pets",
+   "Animal crackers"
+  ],
+  "do": [
+   "Bring pets for a blessing",
+   "Go outdoors and enjoy creation",
+   "Give away something you love",
+   "Build a bird feeder",
+   "Visit the zoo"
+  ],
+  "prayers": [
+   "Canticle of the Sun"
+  ]
+ },
+ {
+  "id": "rosary",
+  "name": "Our Lady of the Rosary",
+  "rank": "memorial",
+  "blurb": "Remembering the Rosary's power, begun after the Battle of Lepanto.",
+  "on": "10-07",
+  "story": "St. Pius V credited the 1571 naval victory at Lepanto to Europe's praying of the Rosary.",
+  "food": [
+   "Edible rosaries made from candy on a string, or cereal"
+  ],
+  "do": [
+   "Pray a family Rosary",
+   "Make rosaries from knotted cord"
+  ],
+  "prayers": [
+   "Litany of Loreto",
+   "The Rosary"
+  ]
+ },
+ {
+  "id": "luke",
+  "name": "Saint Luke",
+  "rank": "feast",
+  "blurb": "The physician who wrote a Gospel, and patron of artists and doctors.",
+  "on": "10-18",
+  "story": "Luke tells the Christmas story, and tradition says he painted Mary's picture.",
+  "food": [
+   "Greek food",
+   "Fig Newtons"
+  ],
+  "do": [
+   "Paint or draw together",
+   "Thank a doctor or nurse",
+   "Spend time outside",
+   "Visit an art museum"
+  ],
+  "readings": [
+   "Luke 10:1–9"
+  ],
+  "prayers": [
+   "Magnificat",
+   "Benedictus",
+   "Nunc Dimittis"
+  ]
+ },
+ {
+  "id": "jp2",
+  "name": "Saint John Paul II",
+  "rank": "optional",
+  "blurb": "The Polish pope who traveled the world and loved the young.",
+  "on": "10-22",
+  "story": "Karol Wojtyla acted, skied and hiked, survived the Nazis and communism, and led the Church for almost 27 years. He later visited and forgave the man who shot him.",
+  "food": [
+   "Pierogi, kielbasa or Polish sausage",
+   "Papal cream cake"
+  ],
+  "do": [
+   "Take a family walk or hike",
+   "Pray for the youth"
+  ],
+  "prayers": [
+   "St. John Paul II's Act of Entrustment to Mary"
+  ]
+ },
+ {
+  "id": "all-hallows-eve",
+  "name": "All Hallows' Eve",
+  "rank": "tradition",
+  "blurb": "The vigil of All Saints, which gave Halloween its name.",
+  "on": "10-31",
+  "story": "Halloween began as the night before All Saints. Spooky and sacred sit side by side, since the saints have conquered the scary stuff.",
+  "food": [
+   "Barmbrack",
+   "Colcannon",
+   "Spooky mac and cheese with food coloring",
+   "Soul cakes"
+  ],
+  "do": [
+   "Trick-or-treat and pray for the dead",
+   "Carve a pumpkin",
+   "Pick out your saint costume for tomorrow"
+  ]
+ },
+ {
+  "id": "all-saints",
+  "name": "All Saints' Day",
+  "rank": "solemnity",
+  "blurb": "Honoring all the saints in heaven, known and unknown.",
+  "on": "11-01",
+  "story": "It's the day for every holy person whose name you've never heard, including perhaps a great-grandmother.",
+  "food": [
+   "Soul bread, baked across Europe",
+   "A feast with something themed for each person's saint"
+  ],
+  "do": [
+   "Dress as your favorite saint and have the others guess",
+   "Throw an All Saints party",
+   "Have a saint trivia game",
+   "Put on an All Saints pageant"
+  ],
+  "readings": [
+   "Matthew 5:1–12"
+  ],
+  "prayers": [
+   "Litany of the Saints"
+  ],
+  "indulgence": "Plenary each day from November 1 to 8 for visiting a cemetery and praying for the dead. It applies only to the souls in purgatory."
+ },
+ {
+  "id": "all-souls",
+  "name": "All Souls' Day",
+  "rank": "principal",
+  "blurb": "Praying for the dead.",
+  "on": "11-02",
+  "story": "Catholics believe we can help those who've died through prayer. Visiting graves in November is a long-standing custom.",
+  "food": [
+   "Pan de muerto, Mexico’s bread for the dead",
+   "Soul cakes",
+   "Pan de muerto, Mexican bread of the dead",
+   "Eggs in purgatory"
+  ],
+  "do": [
+   "Set up an ofrenda with photos and favorite foods, Mexican style",
+   "Clean a family grave and leave flowers",
+   "Visit a cemetery and pray",
+   "Write down the names of your dead and pray for them all month",
+   "Write the names of loved ones who have died on a candle",
+   "Set their photos out on a home altar"
+  ],
+  "prayers": [
+   "Eternal Rest (Requiem Aeternam)",
+   "Prayer of St. Gertrude"
+  ],
+  "indulgence": "Plenary, for the souls in purgatory only, for visiting a church today and praying the Our Father and the Creed. Visiting a cemetery counts through November 8."
+ },
+ {
+  "id": "martin-tours",
+  "name": "Martinmas",
+  "rank": "memorial",
+  "blurb": "The soldier who cut his cloak in two for a beggar.",
+  "on": "11-11",
+  "story": "In a dream, Martin saw Christ wearing the half of the cloak he had given away. Across Europe children walk with lanterns on his feast.",
+  "food": [
+   "Roast goose or chicken",
+   "Sweet buns",
+   "Seven-can soup",
+   "Cookies broken in half and shared"
+  ],
+  "do": [
+   "Make paper lanterns and walk the neighborhood at dusk",
+   "Give a coat to someone who needs one",
+   "Donate coats you no longer use"
+  ]
+ },
+ {
+  "id": "catherine-alexandria",
+  "name": "Saint Catherine of Alexandria",
+  "rank": "optional",
+  "blurb": "A brilliant young martyr, patron of philosophers.",
+  "on": "11-25",
+  "story": "Catherine out-argued the emperor's philosophers and the wheel meant to kill her shattered. Pinwheel-shaped Catherine Wheels get their name from her.",
+  "food": [
+   "Cattern cakes, English caraway buns",
+   "Wheel-shaped pizza",
+   "Pinwheel cookies"
+  ],
+  "do": [
+   "Learn something hard",
+   "Spin a pinwheel",
+   "Wear fancy hats"
+  ]
+ },
+ {
+  "id": "christ-king",
+  "name": "Christ the King",
+  "rank": "solemnity",
+  "blurb": "The last Sunday of the Church year crowns Christ as King of all.",
+  "story": "Pope Pius XI added this feast in 1925 as nationalism was on the rise. It closes the year, and Advent begins the next week.",
+  "food": [
+   "A crown-shaped cake or bundt",
+   "A royal roast",
+   "Chicken a la king"
+  ],
+  "do": [
+   "Make paper crowns",
+   "Hold a small procession around the house"
+  ],
+  "prayers": [
+   "Act of Dedication of the Human Race to Christ the King",
+   "Te Deum"
+  ],
+  "indulgence": "Plenary when the Act of Dedication to Christ the King is prayed publicly today."
+ },
+ {
+  "id": "holy-monday",
+  "name": "Holy Monday",
+  "rank": "tradition",
+  "blurb": "The first quiet days of Holy Week, good for getting the house ready.",
+  "story": "Monday and Tuesday of Holy Week are a practical pause before the Triduum.",
+  "food": [
+   "A big pot of soup that lasts for days"
+  ],
+  "do": [
+   "Clean the house together for Easter",
+   "Start prepping the Easter food"
+  ],
+  "readings": [
+   "Mark 11:12–25",
+   "Mark 14:3–9"
+  ]
+ },
+ {
+  "id": "holy-tuesday",
+  "name": "Holy Tuesday",
+  "rank": "tradition",
+  "blurb": "Another day to clean, cook and get ready for Easter.",
+  "story": "Jesus spent these days teaching in the Temple while the plot against him came together.",
+  "food": [
+   "More of that big pot of soup"
+  ],
+  "do": [
+   "Finish a room or two of cleaning"
+  ],
+  "readings": [
+   "John 12:23–25"
+  ]
+ },
+ {
+  "id": "spy-wednesday",
+  "name": "Spy Wednesday",
+  "rank": "tradition",
+  "blurb": "The day Judas agreed to hand Jesus over.",
+  "story": "The name comes from Judas spying for a chance to betray him, for thirty pieces of silver.",
+  "food": [
+   "Soup and bread by candlelight, blowing out a candle after each reading, like a home Tenebrae"
+  ],
+  "do": [
+   "Count out thirty silver coins and talk about what Judas traded away"
+  ],
+  "readings": [
+   "Matthew 26:14–16",
+   "Luke 22:3–6"
+  ]
+ },
+ {
+  "id": "christmas-eve",
+  "name": "Christmas Eve",
+  "rank": "tradition",
+  "blurb": "The vigil of Christmas, also once the feast of Adam and Eve.",
+  "story": "Medieval towns staged Paradise plays today around a tree hung with apples, one of the roots of the Christmas tree.",
+  "food": [
+   "The Italian-American Feast of the Seven Fishes",
+   "Polish Wigilia, a meatless supper of twelve dishes",
+   "Stollen",
+   "Apples",
+   "A simple meatless supper, keeping the old vigil fast"
+  ],
+  "do": [
+   "Leave an empty place at the table for the unexpected guest, a Polish custom",
+   "Act out Las Posadas, knocking on doors to look for room at the inn",
+   "Decorate the Christmas tree",
+   "Act out a short Adam and Eve play",
+   "Place Baby Jesus in the manger at bedtime"
+  ],
+  "on": "12-24",
+  "readings": [
+   "Genesis 2:4–3:24"
+  ]
+ },
+ {
+  "id": "catherine-sweden",
+  "name": "Saint Catherine of Sweden",
+  "rank": "tradition",
+  "blurb": "St. Bridget's daughter, remembered by families who have lost a baby.",
+  "story": "Catherine of Vadstena led the religious order her mother founded. Families turn to her after miscarriage and stillbirth.",
+  "food": [
+   "Swedish meatballs"
+  ],
+  "do": [
+   "Pray for babies lost before birth",
+   "Take an older child on a one-on-one outing"
+  ],
+  "on": "03-24",
+  "prayers": [
+   "Eternal Rest (Requiem Aeternam)"
+  ]
+ },
+ {
+  "id": "queen-of-angels",
+  "name": "Our Lady, Queen of Angels",
+  "rank": "tradition",
+  "blurb": "Mary's title at St. Francis's little chapel, and the namesake of Los Angeles.",
+  "story": "St. Francis loved a tiny chapel near Assisi called the Portiuncula, dedicated to Our Lady of the Angels. Spanish explorers later carried her name to the river that gave Los Angeles its name.",
+  "food": [
+   "White food or waffles"
+  ],
+  "do": [
+   "Look up how Los Angeles got its name",
+   "Visit a church and pray there"
+  ],
+  "on": "08-02",
+  "prayers": [
+   "Litany of Loreto"
+  ],
+  "indulgence": "Plenary for the Portiuncula: visit your parish church today and pray the Our Father and the Creed. Your bishop may name another day."
+ }
+]

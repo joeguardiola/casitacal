@@ -3,9 +3,33 @@ import SwiftUI
 /// Top bar: big clock + date, weather slot, and the member filter avatars.
 struct HeaderBar: View {
     @Environment(MemberStore.self) private var members
+    @Environment(DailyInfoStore.self) private var daily
+    @State private var isNarrow = false
+
+    private var showsDaily: Bool { !daily.enabledTopics.isEmpty }
+    /// In portrait there's no room for both cards beside the clock and the family.
+    private var usesSecondRow: Bool { showsDaily && isNarrow }
 
     var body: some View {
-        HStack(alignment: .center, spacing: 28) {
+        VStack(alignment: .leading, spacing: 12) {
+            mainRow
+            if usesSecondRow {
+                HStack(spacing: 16) {
+                    DailyInfoChip(maxWidth: 380)
+                    TonightDinnerCard()
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .foregroundStyle(Palette.ink)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 16)
+        .background(Palette.canvas)
+        .onGeometryChange(for: Bool.self) { $0.size.width < 1000 } action: { isNarrow = $0 }
+    }
+
+    private var mainRow: some View {
+        HStack(alignment: .center, spacing: showsDaily ? 20 : 28) {
             TimelineView(.everyMinute) { context in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.date, format: .dateTime.hour().minute())
@@ -20,7 +44,14 @@ struct HeaderBar: View {
 
             WeatherBadge()
 
-            TonightDinnerCard()
+            if showsDaily, !usesSecondRow {
+                DailyInfoChip(maxWidth: 200)
+                    .layoutPriority(1) // the dinner card gives way first
+            }
+
+            if !usesSecondRow {
+                TonightDinnerCard()
+            }
 
             Spacer()
 
@@ -52,9 +83,5 @@ struct HeaderBar: View {
             }
             .fixedSize() // names never get squeezed; the dinner card gives way instead
         }
-        .foregroundStyle(Palette.ink)
-        .padding(.horizontal, 28)
-        .padding(.vertical, 16)
-        .background(Palette.canvas)
     }
 }
