@@ -3,6 +3,15 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.4.0
+- Meals: press and hold a meal to drag it to another day or swap it; recipe suggestions as you type; the week rolls like the Calendar; dinner shows at the bottom of each day on Week
+- Adding ingredients to a list starts with nothing ticked
+- Daily info near the weather, all optional in Settings: Catholic feast days, coming up, national and world days, today in history, a thought for today
+- Catholic days: tap for the story, food ideas, things to do, readings, prayers and indulgences; show them on the calendar or add one to the family calendar
+- Feast-day food: Find a Recipe opens a search for the dish, and Plan Dinner puts it on that day's dinner (it asks before replacing anything)
+- Slideshow: photos that don't match the screen now show whole over a blurred copy, so nobody loses their head
+- Slideshow button in the left bar; choosing photos moved to Settings → Kitchen display
+
 ## 0.3.0
 - Calendar: Week is now a rolling view with today on the left (5 or 7 days); the Day view is gone
 - Week: tap a day's header to widen it; shorter times and tighter cards so titles are readable; a chevron shows when more events are below

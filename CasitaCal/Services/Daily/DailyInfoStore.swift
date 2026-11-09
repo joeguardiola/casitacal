@@ -8,17 +8,18 @@ enum DailyTopic: String, CaseIterable, Identifiable, Sendable {
 
     var title: String {
         switch self {
-        case .catholic: "Catholic feast days"
-        case .currentEvent: "Coming up"
-        case .nationalDay: "National and world days"
-        case .history: "Today in history"
-        case .affirmation: "A thought for today"
+        case .catholic: "Catholic Feast Days"
+        case .currentEvent: "Coming Up"
+        case .nationalDay: "National and World Days"
+        case .history: "Today in History"
+        case .affirmation: "A Thought for Today"
         }
     }
 
     /// Shorter label for the header card.
-    var shortTitle: String { self == .nationalDay ? "Today is" : title }
+    var shortTitle: String { self == .nationalDay ? "Today Is" : title }
 
+    /// SF Symbol for every topic but Catholic days, which `TopicIcon` draws as a Latin cross.
     var symbol: String {
         switch self {
         case .catholic: "cross.fill"
@@ -52,6 +53,8 @@ struct DailyItem: Identifiable, Hashable, Sendable {
     var id: String
     var topic: DailyTopic
     var headline: String
+    /// Replaces the caption and headline on the header card when the headline alone says too little.
+    var cardLine: String?
     var detail: String?
     var story: String?
     var food: [String] = []
@@ -202,10 +205,12 @@ final class DailyInfoStore {
                 )
             }
         }
-        if isOn(.history), let fact = WikipediaFeed.familyFriendly(historyByDay[key] ?? []).first {
+        if isOn(.history), let fact = WikipediaFeed.bestFact(historyByDay[key] ?? []) {
+            let short = WikipediaFeed.shortened(fact.text)
             out.append(DailyItem(
                 id: "history-\(key)", topic: .history,
-                headline: fact.year.map { "On this day in \(String($0))" } ?? "On this day",
+                headline: fact.year.map { "On This Day in \(String($0))" } ?? "On This Day",
+                cardLine: fact.year.map { "\(String($0)): \(short)" } ?? short,
                 detail: fact.text,
                 link: fact.pageURL.flatMap(URL.init(string:)),
                 linkLabel: "Read more on Wikipedia"
@@ -250,8 +255,8 @@ final class DailyInfoStore {
 
     private static func item(_ c: Celebration) -> DailyItem {
         var badges: [String] = []
-        if c.isObligation { badges.append("Holy day of obligation") }
-        if c.isFastDay { badges.append("Fasting and abstinence") }
+        if c.isObligation { badges.append("Holy Day of Obligation") }
+        if c.isFastDay { badges.append("Fasting and Abstinence") }
         return DailyItem(
             id: c.id, topic: .catholic, headline: c.entry.name, detail: c.entry.blurb, story: c.entry.story,
             food: c.entry.food ?? [], activities: c.entry.activities ?? [],

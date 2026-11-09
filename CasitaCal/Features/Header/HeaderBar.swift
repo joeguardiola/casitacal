@@ -16,6 +16,7 @@ struct HeaderBar: View {
             if usesSecondRow {
                 HStack(spacing: 16) {
                     DailyInfoChip(maxWidth: 380)
+                        .layoutPriority(1)
                     TonightDinnerCard()
                     Spacer(minLength: 0)
                 }
@@ -29,7 +30,7 @@ struct HeaderBar: View {
     }
 
     private var mainRow: some View {
-        HStack(alignment: .center, spacing: showsDaily ? 20 : 28) {
+        HStack(alignment: .center, spacing: showsDaily ? 16 : 28) {
             TimelineView(.everyMinute) { context in
                 VStack(alignment: .leading, spacing: 2) {
                     Text(context.date, format: .dateTime.hour().minute())
@@ -45,7 +46,7 @@ struct HeaderBar: View {
             WeatherBadge()
 
             if showsDaily, !usesSecondRow {
-                DailyInfoChip(maxWidth: 200)
+                DailyInfoChip(maxWidth: 230)
                     .layoutPriority(1) // the dinner card gives way first
             }
 

@@ -4,7 +4,7 @@ import SwiftUI
 struct DailyInfoChip: View {
     @Environment(DailyInfoStore.self) private var daily
     @State private var sheetDay: DailyDay?
-    var maxWidth: CGFloat = 200
+    var maxWidth: CGFloat = 230
 
     private let rotateEvery: TimeInterval = 10
 
@@ -29,7 +29,7 @@ struct DailyInfoChip: View {
                     }
                     .buttonStyle(.plain)
                     .animation(.easeInOut(duration: 0.6), value: item.id)
-                    .accessibilityLabel("Today: \(item.headline)")
+                    .accessibilityLabel("Today: \(item.cardLine ?? item.headline)")
                     .accessibilityHint("Shows today's details")
                 }
             }
@@ -45,19 +45,22 @@ struct DailyInfoChip: View {
 
     private func card(_ item: DailyItem) -> some View {
         HStack(spacing: 10) {
-            Image(systemName: item.topic.symbol)
+            TopicIcon(topic: item.topic, crossHeight: 22)
                 .font(.title3)
                 .foregroundStyle(item.topic.tint)
                 .frame(width: 28)
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.topic.shortTitle)
-                    .font(.caption.weight(.medium))
-                    .foregroundStyle(Palette.inkSecondary)
-                    .lineLimit(1)
-                Text(item.headline)
+                if item.cardLine == nil {
+                    Text(item.topic.shortTitle)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Palette.inkSecondary)
+                        .lineLimit(1)
+                }
+                Text(item.cardLine ?? item.headline)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Palette.ink)
-                    .lineLimit(2)
+                    .lineLimit(item.cardLine == nil ? 2 : 3)
+                    .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -69,12 +72,38 @@ struct DailyInfoChip: View {
     }
 
     private func iconOnly(_ item: DailyItem) -> some View {
-        Image(systemName: item.topic.symbol)
+        TopicIcon(topic: item.topic, crossHeight: 26)
             .font(.title2)
             .foregroundStyle(item.topic.tint)
             .frame(width: 58, height: 58)
             .background(Palette.surface, in: shape)
             .overlay(shape.strokeBorder(Palette.hairline))
+    }
+}
+
+/// SF Symbols' "cross" is a medical plus and the emoji is a purple box, so this one is drawn.
+private struct LatinCross: Shape {
+    func path(in rect: CGRect) -> Path {
+        let bar = rect.width * 0.3
+        var path = Path()
+        path.addRoundedRect(in: CGRect(x: rect.midX - bar / 2, y: rect.minY, width: bar, height: rect.height),
+                            cornerSize: CGSize(width: bar / 4, height: bar / 4))
+        path.addRoundedRect(in: CGRect(x: rect.minX, y: rect.minY + rect.height * 0.26, width: rect.width, height: bar),
+                            cornerSize: CGSize(width: bar / 4, height: bar / 4))
+        return path
+    }
+}
+
+private struct TopicIcon: View {
+    let topic: DailyTopic
+    let crossHeight: CGFloat
+
+    var body: some View {
+        if topic == .catholic {
+            LatinCross().frame(width: crossHeight * 0.68, height: crossHeight)
+        } else {
+            Image(systemName: topic.symbol)
+        }
     }
 }
 
@@ -91,9 +120,14 @@ struct DailyInfoSheet: View {
     @Environment(EventStore.self) private var events
     @Environment(GoogleAuth.self) private var auth
     @Environment(MemberStore.self) private var members
+    @Environment(Persistence.self) private var persistence
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var adding: Set<String> = []
     @State private var failure: String?
+    @State private var dinnerTitle: String?
+    @State private var dishToConfirm: String?
 
     private var canAdd: Bool { auth.isSignedIn && events.selectedCalendarId != nil }
 
@@ -119,19 +153,32 @@ struct DailyInfoSheet: View {
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
-            .task { await daily.refresh(for: date) }
-            .alert("Couldn't add it", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
+            .task {
+                dinnerTitle = MealPlan.dinnerTitle(day: DayKey.from(date), context: persistence.context)
+                await daily.refresh(for: date)
+            }
+            .alert(
+                "Replace dinner?",
+                isPresented: Binding(get: { dishToConfirm != nil }, set: { if !$0 { dishToConfirm = nil } }),
+                presenting: dishToConfirm
+            ) { dish in
+                Button("Replace") { planDinner(dish) }
+                Button("Cancel", role: .cancel) {}
+            } message: { dish in
+                Text("\(dinnerTitle ?? "Something else") is planned that night. Replace it with \(dish)?")
+            }
+            .background(Color.clear.alert("Couldn't add it", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
                 Button("OK", role: .cancel) {}
             } message: {
                 Text(failure ?? "")
-            }
+            })
         }
     }
 
     private func itemCard(_ item: DailyItem) -> some View {
         Card {
             VStack(alignment: .leading, spacing: 12) {
-                Label(item.topic.title, systemImage: item.topic.symbol)
+                Label { Text(item.topic.title) } icon: { TopicIcon(topic: item.topic, crossHeight: 16) }
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(item.topic.tint)
                 Text(item.headline)
@@ -154,9 +201,9 @@ struct DailyInfoSheet: View {
                 if let note = item.note {
                     Text(note).font(.subheadline).foregroundStyle(Palette.inkSecondary)
                 }
-                ideas("Food ideas", symbol: "fork.knife", item.food)
-                ideas("Things to do", symbol: "sparkles", item.activities)
-                ideas("Read together", symbol: "book", item.readings)
+                foodIdeas(item.food)
+                ideas("Things to Do", symbol: "sparkles", item.activities)
+                ideas("Read Together", symbol: "book", item.readings)
                 ideas("Pray", symbol: "hands.sparkles", item.prayers)
                 if let indulgence = item.indulgence { indulgenceNote(indulgence) }
                 if let link = item.link {
@@ -192,6 +239,67 @@ struct DailyInfoSheet: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private func foodIdeas(_ list: [String]) -> some View {
+        if !list.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Label("Food Ideas", systemImage: "fork.knife")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Palette.inkSecondary)
+                ForEach(list, id: \.self, content: foodRow)
+            }
+        }
+    }
+
+    private func foodRow(_ idea: String) -> some View {
+        let layout = sizeClass == .compact
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: 6))
+            : AnyLayout(HStackLayout(alignment: .center, spacing: 12))
+        let dish = FoodIdea.dishName(idea)
+        return layout {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text("•").foregroundStyle(Palette.accent)
+                Text(idea)
+                    .foregroundStyle(Palette.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if FoodIdea.hasRecipe(idea) {
+                HStack(spacing: 8) {
+                    if let url = FoodIdea.recipeSearchURL(idea) {
+                        Button("Find a Recipe") { openURL(url) }
+                    }
+                    if FoodIdea.canPlanDinner(idea) {
+                        if dinnerTitle == dish {
+                            Label("Planned", systemImage: "checkmark")
+                                .font(.footnote.weight(.semibold))
+                                .foregroundStyle(.green)
+                        } else {
+                            Button("Plan Dinner") { requestDinner(dish) }
+                        }
+                    }
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+                .fixedSize()
+            }
+        }
+    }
+
+    private func requestDinner(_ dish: String) {
+        if dinnerTitle?.isEmpty == false {
+            dishToConfirm = dish
+        } else {
+            planDinner(dish)
+        }
+    }
+
+    private func planDinner(_ dish: String) {
+        MealPlan.planDinner(title: dish, day: DayKey.from(date), persistence: persistence)
+        dinnerTitle = dish
     }
 
     private func indulgenceNote(_ text: String) -> some View {
@@ -251,7 +359,7 @@ struct DailyInfoSheet: View {
     private var comingUp: some View {
         let upcoming = daily.comingUp(after: date)
         if !upcoming.isEmpty {
-            Text("Coming up this week")
+            Text("Coming Up This Week")
                 .font(.headline)
                 .foregroundStyle(Palette.inkSecondary)
                 .padding(.top, 6)

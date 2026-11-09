@@ -145,3 +145,54 @@ struct KioskTests {
         #expect(mode(idle: 5, at: at(14), current: .slideshow) == .slideshow)
     }
 }
+
+struct SlideshowFitTests {
+    let landscape = CGSize(width: 1180, height: 820)
+
+    @Test func portraitPhotosStayWholeOnALandscapeScreen() {
+        #expect(!SlideshowFit.fillsScreen(photo: CGSize(width: 3024, height: 4032), screen: landscape))
+    }
+
+    @Test func wideScreenshotsStayWhole() {
+        #expect(!SlideshowFit.fillsScreen(photo: CGSize(width: 1920, height: 1080), screen: landscape))
+    }
+
+    @Test func normalLandscapePhotosFill() {
+        #expect(SlideshowFit.fillsScreen(photo: CGSize(width: 4032, height: 3024), screen: landscape))
+        #expect(SlideshowFit.fillsScreen(photo: CGSize(width: 6000, height: 4000), screen: landscape))
+    }
+
+    @Test func rotatingTheIPadSwapsTheAnswer() {
+        let portrait = CGSize(width: 820, height: 1180)
+        #expect(SlideshowFit.fillsScreen(photo: CGSize(width: 3024, height: 4032), screen: portrait))
+    }
+}
+
+struct ManualSlideshowTests {
+    func mode(idle: TimeInterval, hour: Int, current: KioskController.Mode = .slideshow,
+              dark: Bool = false, manual: Bool = true) -> KioskController.Mode {
+        let date = Calendar.current.date(bySettingHour: hour, minute: 0, second: 0, of: Date())!
+        return KioskController.mode(
+            idle: idle, now: date, slideshowAfterMinutes: 10, sleepEnabled: true,
+            sleepStart: DateComponents(hour: 22, minute: 0), sleepEnd: DateComponents(hour: 6, minute: 30),
+            current: current, roomIsDark: dark, manualSlideshow: manual
+        )
+    }
+
+    @Test func survivesNightAndDarkRoomRules() {
+        #expect(mode(idle: 15, hour: 23) == .slideshow)
+        #expect(mode(idle: 5 * 60, hour: 14, dark: true) == .slideshow)
+    }
+
+    @Test func givesWayToTheNightClockEventually() {
+        #expect(mode(idle: 31 * 60, hour: 23) == .sleep)
+    }
+
+    @Test func runsAsLongAsYouLikeInTheDaytime() {
+        #expect(mode(idle: 5 * 3600, hour: 14) == .slideshow)
+    }
+
+    @Test func automaticSlideshowStillStopsAtNight() {
+        #expect(mode(idle: 15, hour: 23, manual: false) == .active)
+    }
+}

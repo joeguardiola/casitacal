@@ -237,6 +237,7 @@ struct KitchenDisplaySection: View {
     @Environment(PhotoLibrary.self) private var photos
     @Environment(WeatherStore.self) private var weather
     @State private var cameraRefused = false
+    @State private var choosingPhotos = false
 
     var body: some View {
         @Bindable var kiosk = kiosk
@@ -245,7 +246,18 @@ struct KitchenDisplaySection: View {
                 Text("Off").tag(0)
                 ForEach([2, 5, 10, 15, 30], id: \.self) { Text("After \($0) min").tag($0) }
             }
-            LabeledContent("Slideshow album", value: photos.selectedAlbum?.title ?? "Choose in Photos")
+            Button { choosingPhotos = true } label: {
+                LabeledContent("Slideshow photos") {
+                    HStack(spacing: 6) {
+                        Text(photos.selectedAlbum?.title ?? "Choose an album")
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+            }
+            .tint(.primary)
+            .sheet(isPresented: $choosingPhotos) { PhotosScreen() }
             Toggle(isOn: Binding(
                 get: { kiosk.presenceEnabled },
                 set: { on in

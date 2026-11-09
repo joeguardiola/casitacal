@@ -16,6 +16,8 @@ final class KioskController {
         didSet { if mode != oldValue { modeChanged(from: oldValue) } }
     }
     private(set) var lastInteraction = Date()
+    /// Started with the Slideshow button, so only a touch ends it (the night fallback aside).
+    private var isManualSlideshow = false
     /// Bumps each time the display wakes from the slideshow or night clock (screens reset to Calendar/today).
     private(set) var wakeCount = 0
 
@@ -43,6 +45,8 @@ final class KioskController {
 
     /// How long a touch keeps the screen awake during sleep hours.
     nonisolated static let wakeDuringSleep: TimeInterval = 2 * 60
+    /// How long a slideshow started by hand keeps running at night before the dark clock takes over.
+    nonisolated static let manualSlideshowAtNight: TimeInterval = 30 * 60
 
     private var savedBrightness: CGFloat?
     private var isDimmed: Bool { savedBrightness != nil }
@@ -64,12 +68,14 @@ final class KioskController {
     }
 
     private func modeChanged(from old: Mode) {
+        if mode != .slideshow { isManualSlideshow = false }
         if old != .active && mode == .active { wakeCount += 1 }
         updatePresence()
     }
 
     private func updatePresence() {
-        if presenceEnabled && mode == .slideshow && PresenceDetector.isAuthorized {
+        // Not for a manual slideshow: the person who just tapped the button is standing right at the camera.
+        if presenceEnabled && mode == .slideshow && !isManualSlideshow && PresenceDetector.isAuthorized {
             presence.start()
         } else {
             presence.stop()
@@ -103,12 +109,15 @@ final class KioskController {
 
     func registerInteraction() {
         lastInteraction = Date()
+        isManualSlideshow = false
         if mode != .active { mode = .active }
         if isDimmed { restoreBrightness() }
     }
 
-    /// Show the slideshow right now (from the Photos screen).
+    /// Show the slideshow right now (the Slideshow button).
     func startSlideshowNow() {
+        isManualSlideshow = true
+        lastInteraction = Date()
         mode = .slideshow
     }
 
@@ -117,7 +126,7 @@ final class KioskController {
         let target = Self.mode(
             idle: idle, now: now, slideshowAfterMinutes: slideshowAfterMinutes,
             sleepEnabled: sleepEnabled, sleepStart: sleepStart, sleepEnd: sleepEnd,
-            current: mode, roomIsDark: darkRoomEnabled && roomIsDark
+            current: mode, roomIsDark: darkRoomEnabled && roomIsDark, manualSlideshow: isManualSlideshow
         )
         if target != mode { mode = target }
         // Dim only for scheduled sleep; in a dark room Auto-Brightness already has it low.
@@ -141,10 +150,14 @@ final class KioskController {
     nonisolated static func mode(
         idle: TimeInterval, now: Date, slideshowAfterMinutes: Int, sleepEnabled: Bool,
         sleepStart: DateComponents, sleepEnd: DateComponents, current: Mode, roomIsDark: Bool = false,
-        calendar: Calendar = .current
+        manualSlideshow: Bool = false, calendar: Calendar = .current
     ) -> Mode {
         let scheduled = sleepEnabled && isWithin(now, start: sleepStart, end: sleepEnd, calendar: calendar)
-        if scheduled || roomIsDark {
+        let isNight = scheduled || roomIsDark
+        if manualSlideshow && current == .slideshow && (!isNight || idle < manualSlideshowAtNight) {
+            return .slideshow
+        }
+        if isNight {
             return idle >= wakeDuringSleep ? .sleep : .active
         }
         if current == .slideshow { return .slideshow } // started manually or by idle; a touch ends it

@@ -182,7 +182,7 @@ Or just put their name in the title: *"Emma piano"*.
 ### Photo slideshow
 1. On any family iPhone, open the **Photos** app and tap **+ → New Shared Album** (e.g. "Kitchen Frame"). Invite everyone, **including the Apple ID the iPad uses**.
 2. On the iPad, accept the invite in the Photos app.
-3. In CasitaCal, go to **Photos → Allow photo access → Full Access**, then **Choose album**.
+3. In CasitaCal, go to **Settings → Kitchen display → Slideshow photos → Allow photo access → Full Access**, then **Choose album**.
 4. Tap **Start slideshow** to preview it. It also starts by itself when the iPad sits idle (set the delay in **Settings → Kitchen display**). Tap anywhere to return to the calendar.
 
 ### Chores, lists and meals how-to

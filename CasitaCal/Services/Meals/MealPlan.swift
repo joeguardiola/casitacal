@@ -2,6 +2,33 @@ import CoreData
 
 /// Changes to the weekly meal plan that aren't tied to one screen.
 enum MealPlan {
+    /// The dinner planned for a day, if any.
+    static func dinnerTitle(day: String, context: NSManagedObjectContext) -> String? {
+        let request = NSFetchRequest<CDMeal>(entityName: "CDMeal")
+        request.predicate = NSPredicate(format: "day == %@ AND slot == %@", day, MealSlot.dinner.rawValue)
+        return (try? context.fetch(request))?.first?.title
+    }
+
+    /// Puts a dish with no recipe attached on a day's dinner, replacing whatever was planned there.
+    @MainActor
+    static func planDinner(title: String, day: String, persistence: Persistence) {
+        let request = NSFetchRequest<CDMeal>(entityName: "CDMeal")
+        request.predicate = NSPredicate(format: "day == %@ AND slot == %@", day, MealSlot.dinner.rawValue)
+        let existing = (try? persistence.context.fetch(request)) ?? []
+        let meal = existing.first ?? {
+            let m = persistence.insert(CDMeal.self)
+            m.id = UUID()
+            m.day = day
+            m.slot = MealSlot.dinner.rawValue
+            m.household = persistence.household()
+            return m
+        }()
+        meal.title = title
+        meal.recipe = nil
+        existing.dropFirst().forEach(persistence.context.delete)
+        persistence.save()
+    }
+
     /// Moves a planned meal to another day and slot. If that spot is taken, the meals trade places.
     /// Every record in the target spot moves, so nothing ends up hidden behind a duplicate.
     /// - Returns: `false` if nothing changed (unknown meal, or dropped where it already was).

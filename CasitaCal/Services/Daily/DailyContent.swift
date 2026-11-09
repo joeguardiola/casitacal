@@ -135,6 +135,45 @@ enum CurrentEvents {
     }
 }
 
+/// Turns a feast's food idea into something to plan or look up.
+enum FoodIdea {
+    /// Hand-sorted in `food-actions.json`: suggestions that aren't dishes, ones that aren't a dinner, and
+    /// cleaner names where the first phrase of the idea wouldn't read well on the meal plan.
+    private struct Actions: Decodable {
+        var skip: Set<String> = []
+        var recipeOnly: Set<String> = []
+        var names: [String: String] = [:]
+    }
+
+    private static let actions: Actions = {
+        guard let url = Bundle.main.url(forResource: "food-actions", withExtension: "json"),
+              let data = try? Data(contentsOf: url),
+              let decoded = try? JSONDecoder().decode(Actions.self, from: data) else { return Actions() }
+        return decoded
+    }()
+
+    static func hasRecipe(_ idea: String) -> Bool { !actions.skip.contains(idea) }
+    static func canPlanDinner(_ idea: String) -> Bool { hasRecipe(idea) && !actions.recipeOnly.contains(idea) }
+
+    /// "Cullen skink, a Scottish smoked fish soup" becomes "Cullen skink".
+    static func dishName(_ idea: String) -> String {
+        if let name = actions.names[idea] { return name }
+        var s = idea
+        if let cut = s.range(of: #", | — | – "#, options: .regularExpression) {
+            s = String(s[..<cut.lowerBound])
+        }
+        s = s.trimmingCharacters(in: CharacterSet.whitespaces.union(CharacterSet(charactersIn: ".")))
+        s = s.replacingOccurrences(of: #"^(A|An|The) "#, with: "", options: .regularExpression)
+        return s.prefix(1).uppercased() + s.dropFirst()
+    }
+
+    static func recipeSearchURL(_ idea: String) -> URL? {
+        var parts = URLComponents(string: "https://www.google.com/search")
+        parts?.queryItems = [URLQueryItem(name: "q", value: "\(dishName(idea)) recipe")]
+        return parts?.url
+    }
+}
+
 /// One "on this day" entry from Wikipedia.
 struct HistoryFact: Codable, Hashable, Sendable {
     var year: Int?
@@ -174,9 +213,36 @@ enum WikipediaFeed {
         }
     }
 
+    /// The main clause of a fact, for the small header card.
+    static func shortened(_ text: String) -> String {
+        var s = text.replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
+        if let cut = s.range(of: #"; | – | — | when "#, options: .regularExpression) {
+            s = String(s[..<cut.lowerBound])
+        }
+        // Stop at the first comma once the sentence has its verb, so "X, the third Y, launched" stays whole.
+        var from = s.startIndex
+        while let comma = s.range(of: ", ", range: from..<s.endIndex) {
+            let head = s[..<comma.lowerBound]
+            if head.count >= 30, head.range(of: mainVerb, options: .regularExpression) != nil {
+                s = String(head)
+                break
+            }
+            from = comma.upperBound
+        }
+        s = s.trimmingCharacters(in: .whitespaces)
+        return s.hasSuffix(".") ? String(s.dropLast()) : s
+    }
+
+    private static let mainVerb = #"\b[a-z]+ed\b|\b(became|won|began|made|took|sold|flew|went|was|were|wrote|built|ran|gave|held|set|saw|came|broke|drew)\b"#
+
+    /// The fact that reads best in the header: family-friendly, and the shortest of those.
+    static func bestFact(_ facts: [HistoryFact]) -> HistoryFact? {
+        familyFriendly(facts).min { shortened($0.text).count < shortened($1.text).count }
+    }
+
     private static let delightWords = #"\b(discover\w*|invent\w*|patent\w*|launch\w*|telescope|spacecraft|space|nasa|comet|planet\w*|moon|apollo|voyager|astronaut\w*|premier\w*|publish\w*|opened|inaugurated|museum|library|university|national park|olympic\w*|world cup|nobel|symphony|opera|film|novel|album|broadway|musical|bridge|canal|railway|flight|airship|expedition|climb\w*|everest|canoniz\w*|beatif\w*|cathedral|encyclical|painted|painting|first|record)\b"#
 
-    private static let grimWords = #"\b(kill\w*|war|wars|battle\w*|massacre\w*|murder\w*|bomb\w*|attack\w*|assassinat\w*|execut\w*|shot|shoot\w*|dead|death\w*|die|died|dies|dying|bodies|body|genocide|terror\w*|invade\w*|invasion|crash\w*|disaster\w*|earthquake\w*|hijack\w*|nazi\w*|holocaust|slave\w*|slavery|rape\w*|coup|sank|sunk|sink\w*|explo\w*|riot\w*|hanged|lynch\w*|victims?|casualt\w*|plague|pandemic|famine|disappear\w*|sentenc\w*|arrest\w*|prison\w*|jail\w*|military|army|armies|troops?|soldiers?|navy|naval|warship\w*|rebel\w*|revolt\w*|uprising|protest\w*|fires?|flood\w*|hurricane|cyclone|tornado|volcano\w*|erupt\w*|fatal\w*|injur\w*|destroy\w*|abduct\w*|kidnap\w*|hostage\w*|captur\w*|conquer\w*|siege|annex\w*|dictator\w*|banned|ban|election\w*|president\w*|prime minister|parliament|government\w*|court|overthrew|overthrow|deposed|nuclear|weapon\w*|missile\w*|violen\w*|crime\w*|crimin\w*|sex\w*|transvest\w*|transsex\w*|adults|abort\w*|suicide|collapse\w*|derail\w*|mutin\w*|surrender\w*|occup\w*|independence|referendum|constitution\w*)\b"#
+    private static let grimWords = #"\b(kill\w*|war|wars|battle\w*|massacre\w*|murder\w*|bomb\w*|attack\w*|assassinat\w*|execut\w*|shot|shoot\w*|dead|death\w*|die|died|dies|dying|bodies|body|genocide|terror\w*|invade\w*|invasion|crash\w*|disaster\w*|earthquake\w*|hijack\w*|nazi\w*|holocaust|slave\w*|slavery|rape\w*|coup|sank|sunk|sink\w*|explo\w*|riot\w*|hanged|lynch\w*|victims?|casualt\w*|plague|pandemic|famine|disappear\w*|sentenc\w*|arrest\w*|prison\w*|jail\w*|military|army|armies|troops?|soldiers?|navy|naval|warship\w*|rebel\w*|revolt\w*|uprising|protest\w*|fires?|flood\w*|hurricane|cyclone|tornado\w*|storm\w*|volcano\w*|erupt\w*|fatal\w*|injur\w*|destroy\w*|abduct\w*|kidnap\w*|hostage\w*|captur\w*|conquer\w*|siege|annex\w*|dictator\w*|banned|ban|election\w*|president\w*|prime minister|parliament|government\w*|court|overthrew|overthrow|deposed|nuclear|weapon\w*|missile\w*|violen\w*|crime\w*|crimin\w*|sex\w*|contracept\w*|birth control|enovid|transvest\w*|transsex\w*|adults|abort\w*|suicide|collapse\w*|derail\w*|mutin\w*|surrender\w*|occup\w*|independence|referendum|constitution\w*)\b"#
 
     static func parse(_ data: Data) throws -> [HistoryFact] {
         try JSONDecoder().decode(Feed.self, from: data).selected.map { item in

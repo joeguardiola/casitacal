@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AppSection: String, CaseIterable, Identifiable {
-    case calendar, chores, lists, meals, photos, settings
+    case calendar, chores, lists, meals, settings
 
     var id: String { rawValue }
 
@@ -13,7 +13,6 @@ enum AppSection: String, CaseIterable, Identifiable {
         case .chores: "checklist"
         case .lists: "list.bullet.rectangle"
         case .meals: "fork.knife"
-        case .photos: "photo.on.rectangle"
         case .settings: "gearshape"
         }
     }
@@ -31,7 +30,7 @@ struct RootView: View {
         if sizeClass == .compact {
             // Phone: companion tabs (no photo frame on a phone).
             TabView(selection: $section) {
-                ForEach(AppSection.allCases.filter { $0 != .photos }) { s in
+                ForEach(AppSection.allCases) { s in
                     Tab(s.title, systemImage: s.systemImage, value: s) {
                         SectionContent(section: s)
                     }
@@ -76,7 +75,6 @@ struct SectionContent: View {
         case .chores: ChoresScreen()
         case .lists: ListsScreen()
         case .meals: MealsScreen()
-        case .photos: PhotosScreen()
         case .settings: SettingsScreen()
         }
     }
@@ -85,6 +83,9 @@ struct SectionContent: View {
 /// Vertical icon rail on the left edge (iPad).
 struct SideRail: View {
     @Binding var selection: AppSection
+    @Environment(KioskController.self) private var kiosk
+    @Environment(PhotoLibrary.self) private var photos
+    @State private var settingUpPhotos = false
 
     var body: some View {
         VStack(spacing: 10) {
@@ -99,34 +100,54 @@ struct SideRail: View {
             ForEach(AppSection.allCases.filter { $0 != .settings }) { s in
                 railButton(s)
             }
+            slideshowButton
             Spacer()
             railButton(.settings)
                 .padding(.bottom, 12)
         }
         .frame(width: 96)
         .background(Palette.sidebar)
+        .sheet(isPresented: $settingUpPhotos) { PhotosScreen() }
+    }
+
+    /// Not a section: it starts the slideshow on top of whatever is showing.
+    private var slideshowButton: some View {
+        Button {
+            if photos.canRead && photos.selectedAlbumId != nil {
+                kiosk.startSlideshowNow()
+            } else {
+                settingUpPhotos = true
+            }
+        } label: {
+            railLabel("Slideshow", systemImage: "photo.on.rectangle", selected: false)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Start slideshow")
     }
 
     private func railButton(_ s: AppSection) -> some View {
-        let selected = selection == s
-        return Button {
+        Button {
             selection = s
         } label: {
-            VStack(spacing: 4) {
-                Image(systemName: s.systemImage)
-                    .font(.system(size: 24, weight: .medium))
-                Text(s.title)
-                    .font(.caption.weight(.semibold))
-            }
-            .frame(width: 76, height: 68)
-            .foregroundStyle(selected ? Color.white : Palette.inkSecondary)
-            .background(
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .fill(selected ? Palette.accent : .clear)
-            )
-            .contentShape(Rectangle())
+            railLabel(s.title, systemImage: s.systemImage, selected: selection == s)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(s.title)
+    }
+
+    private func railLabel(_ title: String, systemImage: String, selected: Bool) -> some View {
+        VStack(spacing: 4) {
+            Image(systemName: systemImage)
+                .font(.system(size: 24, weight: .medium))
+            Text(title)
+                .font(.caption.weight(.semibold))
+        }
+        .frame(width: 76, height: 68)
+        .foregroundStyle(selected ? Color.white : Palette.inkSecondary)
+        .background(
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(selected ? Palette.accent : .clear)
+        )
+        .contentShape(Rectangle())
     }
 }

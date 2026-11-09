@@ -1,3 +1,4 @@
+import CoreImage
 import SwiftUI
 
 /// Covers the dashboard when the kiosk is idle (slideshow) or asleep (night clock).
@@ -28,7 +29,7 @@ struct SlideshowView: View {
     @Environment(EventStore.self) private var events
     @Environment(MemberStore.self) private var members
 
-    @State private var current: UIImage?
+    @State private var current: SlideshowFrame?
     @State private var index = 0
     @State private var order: [String] = []
     @State private var zoom = false
@@ -40,13 +41,8 @@ struct SlideshowView: View {
             ZStack(alignment: .bottomLeading) {
                 Color.black
                 if let current {
-                    Image(uiImage: current)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: geo.size.width, height: geo.size.height)
-                        .scaleEffect(zoom ? 1.08 : 1.0) // gentle Ken Burns
-                        .clipped()
-                        .id(index)
+                    SlideshowPhoto(frame: current, screen: geo.size, zoom: zoom)
+                        .id(current.id)
                         .transition(.opacity)
                 } else {
                     emptyState
@@ -65,8 +61,11 @@ struct SlideshowView: View {
                 while !Task.isCancelled {
                     let next = await photos.image(for: order[index % order.count], size: size)
                     if let next {
+                        let backdrop = await SlideshowFit.backdrop(of: next)
                         zoom = false
-                        withAnimation(.easeInOut(duration: 1.2)) { current = next }
+                        withAnimation(.easeInOut(duration: 1.2)) {
+                            current = SlideshowFrame(photo: next, backdrop: backdrop)
+                        }
                         withAnimation(.linear(duration: Self.secondsPerPhoto + 2)) { zoom = true }
                     }
                     try? await Task.sleep(for: .seconds(Self.secondsPerPhoto))
@@ -76,12 +75,13 @@ struct SlideshowView: View {
         }
         .ignoresSafeArea()
         .statusBarHidden()
+        .onAppear { if photos.canRead { photos.reload() } }
     }
 
     private var emptyState: some View {
         VStack(spacing: 12) {
             Image(systemName: "photo.on.rectangle.angled").font(.system(size: 56))
-            Text(photos.selectedAlbumId == nil ? "Choose a photo album in Photos" : "No photos in this album yet")
+            Text(photos.selectedAlbumId == nil ? "Choose a photo album in Settings" : "No photos in this album yet")
                 .font(.title2)
         }
         .foregroundStyle(.white.opacity(0.7))
@@ -123,6 +123,77 @@ struct SlideshowView: View {
             .filter { EventMapper.isVisible($0, members: members.members, hidden: members.hiddenMemberIDs) }
             .sorted { ($0.isAllDay ? 1 : 0, $0.start) < ($1.isAllDay ? 1 : 0, $1.start) }
             .first
+    }
+}
+
+private struct SlideshowFrame: Identifiable {
+    let id = UUID()
+    let photo: UIImage
+    let backdrop: UIImage?
+}
+
+/// One slide. Photos close to the screen's shape fill it; anything else is shown whole over a blurred
+/// copy of itself, so a portrait photo on a landscape iPad keeps everyone's heads.
+private struct SlideshowPhoto: View {
+    let frame: SlideshowFrame
+    let screen: CGSize
+    let zoom: Bool
+
+    var body: some View {
+        if SlideshowFit.fillsScreen(photo: frame.photo.size, screen: screen) {
+            filled(frame.photo, zoomedTo: 1.04)
+        } else {
+            ZStack {
+                filled(frame.backdrop ?? frame.photo, zoomedTo: 1.08)
+                    .overlay(Color.black.opacity(0.2))
+                Image(uiImage: frame.photo)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: screen.width, height: screen.height)
+                    .shadow(color: .black.opacity(0.35), radius: 24)
+            }
+        }
+    }
+
+    private func filled(_ image: UIImage, zoomedTo amount: CGFloat) -> some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFill()
+            .frame(width: screen.width, height: screen.height)
+            .scaleEffect(zoom ? amount : 1) // gentle Ken Burns
+            .clipped()
+    }
+}
+
+enum SlideshowFit {
+    /// True when filling the screen would trim only a sliver of the photo.
+    static func fillsScreen(photo: CGSize, screen: CGSize) -> Bool {
+        guard photo.width > 0, photo.height > 0, screen.width > 0, screen.height > 0 else { return true }
+        let photoShape = photo.width / photo.height
+        let screenShape = screen.width / screen.height
+        return min(photoShape, screenShape) / max(photoShape, screenShape) >= 0.88
+    }
+
+    /// A small, already-blurred copy, cheap enough to crossfade and zoom on an older iPad.
+    static func backdrop(of photo: UIImage) async -> UIImage? {
+        await Task.detached(priority: .utility) { makeBackdrop(photo) }.value
+    }
+
+    private static func makeBackdrop(_ photo: UIImage) -> UIImage? {
+        guard photo.size.width > 0 else { return nil }
+        let width: CGFloat = 240
+        let size = CGSize(width: width, height: (photo.size.height * width / photo.size.width).rounded())
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let small = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            photo.draw(in: CGRect(origin: .zero, size: size))
+        }
+        guard let input = CIImage(image: small), let blur = CIFilter(name: "CIGaussianBlur") else { return small }
+        blur.setValue(input.clampedToExtent(), forKey: kCIInputImageKey)
+        blur.setValue(8.0, forKey: kCIInputRadiusKey)
+        guard let output = blur.outputImage?.cropped(to: input.extent),
+              let rendered = CIContext().createCGImage(output, from: input.extent) else { return small }
+        return UIImage(cgImage: rendered)
     }
 }
 

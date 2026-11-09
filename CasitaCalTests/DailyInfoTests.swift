@@ -1,3 +1,4 @@
+import CoreData
 import Foundation
 import Testing
 @testable import CasitaCal
@@ -179,11 +180,114 @@ struct DailyContentTests {
         #expect(WikipediaFeed.familyFriendly(facts).map(\.year) == [1895, 1969])
     }
 
+    @Test func headerCardGetsTheMainClause() {
+        let long = "The English rock group Led Zeppelin (pictured) released their fourth album, which became a best seller."
+        #expect(WikipediaFeed.shortened(long) == "The English rock group Led Zeppelin released their fourth album")
+        #expect(WikipediaFeed.shortened("William of Orange founded Leiden University, the oldest university in the Netherlands.") == "William of Orange founded Leiden University")
+        // A comma before the main verb has to stay.
+        let appositive = "Discovery, the third orbiter of the program, lifted off from Florida."
+        #expect(WikipediaFeed.shortened(appositive) == "Discovery, the third orbiter of the program, lifted off from Florida")
+    }
+
+    @Test func headerCardPrefersTheShortestGoodFact() {
+        let facts = [
+            HistoryFact(year: 1900, text: "A very long and winding account of the first opera performed in a small town square."),
+            HistoryFact(year: 1969, text: "Sesame Street first aired."),
+            HistoryFact(year: 1916, text: "A battle."),
+        ]
+        #expect(WikipediaFeed.bestFact(facts)?.year == 1969)
+    }
+
     @Test func wikipediaFeedParses() throws {
         let json = #"{"selected":[{"text":"Something happened.","year":1941,"pages":[{"normalizedtitle":"Thing","content_urls":{"desktop":{"page":"https://en.wikipedia.org/wiki/Thing"}}}]}]}"#
         let facts = try WikipediaFeed.parse(Data(json.utf8))
         #expect(facts.first?.year == 1941)
         #expect(facts.first?.pageURL == "https://en.wikipedia.org/wiki/Thing")
+    }
+}
+
+struct FoodIdeaTests {
+    @Test func dishNameDropsTheExplanation() {
+        #expect(FoodIdea.dishName("Cullen skink, a Scottish smoked fish soup") == "Cullen skink")
+        #expect(FoodIdea.dishName("Panettone") == "Panettone")
+        #expect(FoodIdea.dishName("waffles — the Swedish way.") == "Waffles")
+    }
+
+    @Test func sortedIdeasGetTheRightButtons() {
+        #expect(FoodIdea.canPlanDinner("Shepherd's pie"))
+        #expect(FoodIdea.dishName("Three sisters stew of corn, beans and squash") == "Three sisters stew")
+        #expect(FoodIdea.dishName("A fish fry") == "Fish fry")
+        #expect(FoodIdea.hasRecipe("Cherry pie") && !FoodIdea.canPlanDinner("Cherry pie"))
+        #expect(!FoodIdea.hasRecipe("Bring a meal to someone expecting"))
+    }
+
+    @Test func sortingFileMatchesTheFeastList() throws {
+        struct Actions: Decodable { var skip: [String]; var recipeOnly: [String]; var names: [String: String] }
+        func load(_ name: String) throws -> Data {
+            try Data(contentsOf: try #require(Bundle.main.url(forResource: name, withExtension: "json")))
+        }
+        let actions = try JSONDecoder().decode(Actions.self, from: load("food-actions"))
+        let feasts = try JSONDecoder().decode([FeastEntry].self, from: load("feasts"))
+        let ideas = Set(feasts.flatMap { $0.food ?? [] })
+        for idea in actions.skip + actions.recipeOnly + Array(actions.names.keys) {
+            #expect(ideas.contains(idea), "\(idea) isn't in feasts.json")
+        }
+        for name in ideas.filter(FoodIdea.hasRecipe).map(FoodIdea.dishName) {
+            #expect(name.count <= 36, "\(name) is too long for the meal plan")
+        }
+    }
+
+    @Test func searchLinkSendsOnlyTheDish() throws {
+        let url = try #require(FoodIdea.recipeSearchURL("Pastéis de nata, Portuguese custard tarts"))
+        let query = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first?.value
+        #expect(query == "Pastéis de nata recipe")
+    }
+}
+
+@MainActor
+struct PlanDinnerTests {
+    let persistence = Persistence(inMemory: true)
+    let day = "2026-11-08"
+
+    @discardableResult
+    func meal(_ title: String, slot: MealSlot = .dinner) -> CDMeal {
+        let m = persistence.insert(CDMeal.self)
+        m.id = UUID()
+        m.title = title
+        m.day = day
+        m.slot = slot.rawValue
+        m.household = persistence.household()
+        return m
+    }
+
+    func dinners() -> [CDMeal] {
+        let request = NSFetchRequest<CDMeal>(entityName: "CDMeal")
+        request.predicate = NSPredicate(format: "day == %@ AND slot == %@", day, MealSlot.dinner.rawValue)
+        return (try? persistence.context.fetch(request)) ?? []
+    }
+
+    @Test func fillsAnEmptyNight() {
+        MealPlan.planDinner(title: "Soul bread", day: day, persistence: persistence)
+        #expect(MealPlan.dinnerTitle(day: day, context: persistence.context) == "Soul bread")
+    }
+
+    @Test func replacesDuplicatesAndClearsTheOldRecipe() {
+        let old = meal("Tacos")
+        let recipe = persistence.insert(CDRecipe.self)
+        recipe.id = UUID()
+        recipe.title = "Tacos"
+        old.recipe = recipe
+        meal("Tacos again")
+        MealPlan.planDinner(title: "Soul bread", day: day, persistence: persistence)
+        #expect(dinners().count == 1)
+        #expect(dinners().first?.title == "Soul bread")
+        #expect(dinners().first?.recipe == nil)
+    }
+
+    @Test func leavesOtherMealsAlone() {
+        let lunch = meal("Soup", slot: .lunch)
+        MealPlan.planDinner(title: "Soul bread", day: day, persistence: persistence)
+        #expect(lunch.title == "Soup")
     }
 }
 

@@ -1,12 +1,25 @@
 import SwiftUI
 
-/// Pick the slideshow album, preview it, start the slideshow.
+/// Pick the slideshow album, preview it, start the slideshow. Shown as a sheet from Settings or the side rail.
 struct PhotosScreen: View {
     @Environment(PhotoLibrary.self) private var photos
     @Environment(KioskController.self) private var kiosk
+    @Environment(\.dismiss) private var dismiss
     @State private var choosing = false
 
     var body: some View {
+        NavigationStack {
+            content
+                .navigationTitle("Slideshow Photos")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+                }
+        }
+        .presentationSizing(.page)
+    }
+
+    private var content: some View {
         VStack(alignment: .leading, spacing: 20) {
             if !photos.canRead {
                 accessCard
@@ -24,7 +37,10 @@ struct PhotosScreen: View {
                     Button("Choose album", systemImage: "rectangle.stack") { choosing = true }
                         .buttonStyle(.bordered)
                         .controlSize(.large)
-                    Button("Start slideshow", systemImage: "play.fill") { kiosk.startSlideshowNow() }
+                    Button("Start slideshow", systemImage: "play.fill") {
+                        dismiss()
+                        kiosk.startSlideshowNow()
+                    }
                         .buttonStyle(.borderedProminent)
                         .controlSize(.large)
                         .disabled(photos.assetIDs.isEmpty)
