@@ -21,6 +21,9 @@ struct HeaderBar: View {
         .foregroundStyle(Palette.ink)
         .padding(.horizontal, 28)
         .padding(.vertical, 16)
+        // Always as wide as the space given, so the measurement below never depends on which row
+        // the daily card is in. (Measuring the content made the card flip between rows forever.)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.canvas)
         .onGeometryChange(for: Bool.self) { $0.size.width < 1000 } action: { isNarrow = $0 }
     }

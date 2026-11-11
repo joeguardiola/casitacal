@@ -3,6 +3,10 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.5.1
+
+- Fixed the header banner: on the kitchen iPad it kept jumping to a second row (squeezing the calendar) and sometimes showed only its icon with no text
+
 ## 0.5.0
 - Calendar Week: today is wider by default; tap anywhere in a day to widen it, double-tap a day to add an event on that day (an entry with no day in it now lands on the day you tapped)
 - Meals can have sides, each with its own recipe; the calendar still shows only the main dish

@@ -58,17 +58,19 @@ struct DailyInfoChip: View {
                         .lineLimit(1)
                 }
                 Text(item.cardLine ?? item.headline)
-                    .font(.body.weight(.semibold))
+                    .font(.callout.weight(.semibold))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(item.cardLine == nil ? 2 : 3)
-                    .minimumScaleFactor(0.85)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .minimumScaleFactor(0.8)
             }
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .frame(minWidth: 190, maxWidth: maxWidth, minHeight: 66, alignment: .leading)
+        .padding(.vertical, 8)
+        // idealWidth: what the card asks for when the header checks whether it fits; without it
+        // the whole sentence on one line was the ask, which never fit, so only the icon showed.
+        // Height capped at the clock and avatars' height so the header never grows.
+        .frame(minWidth: 190, idealWidth: 220, maxWidth: maxWidth, minHeight: 66, maxHeight: 76, alignment: .leading)
         .background(Palette.surface, in: shape)
         .overlay(shape.strokeBorder(Palette.hairline))
     }
