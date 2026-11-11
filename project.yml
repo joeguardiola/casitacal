@@ -16,7 +16,7 @@ settings:
     SWIFT_VERSION: "6.0"
     # DEVELOPMENT_TEAM comes from Config/Local.xcconfig (gitignored)
     CODE_SIGN_STYLE: Automatic
-    MARKETING_VERSION: "0.4.0" # bumped by scripts/testflight.sh on each upload
+    MARKETING_VERSION: "0.5.0" # bumped by scripts/testflight.sh on each upload
     CURRENT_PROJECT_VERSION: "1"
 targets:
   CasitaCal:
