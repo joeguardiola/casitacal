@@ -10,7 +10,7 @@ The version shows in the app under **Settings → About**.
 - Feast-day food: Find a Recipe opens the search inside the app; open a recipe to save it to Recipes, make it that day's dinner, or add it as a side
 - Catholic feasts added to the calendar now show at the bottom of the day for the whole household instead of going to Google; "Show every feast on the calendar" puts all of them there
 - Header: the rotating daily card is a little bigger and fills the space the family avatars leave; the dinner card is gone from the header (dinner still shows on Week and the slideshow)
-- Night clock comes on about 10 seconds after the lights go off (tested on the kitchen iPad); "It's Dark Now" in Settings sets the darkness level in one tap
+- Night clock comes on about 10 seconds after the lights go off, with a built-in darkness level and nothing to set up (tested on the kitchen iPad)
 - Settings is simpler: Daily Info and Kitchen Display have their own pages, Google and week start are one Calendar section, status lines show only when something's wrong, and the Ascension choice is gone (always Sunday)
 
 ## 0.4.0

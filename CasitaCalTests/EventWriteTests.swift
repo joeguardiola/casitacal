@@ -120,12 +120,19 @@ struct KioskTests {
         #expect(mode(idle: 30, at: at(23), dark: true) == .sleep)
     }
 
-    @Test func itsDarkNowSetsTheCutOffJustAboveTheReading() {
-        // The kitchen's darkest Auto-Brightness level was 0.25 with the lights on at 0.50.
-        let cutOff = KioskController.threshold(forDarkReading: 0.25)
-        #expect(abs(cutOff - 0.29) < 0.001)
-        #expect(KioskController.isDark(brightness: 0.25, threshold: cutOff, wasDark: false))
-        #expect(!KioskController.isDark(brightness: 0.50, threshold: cutOff, wasDark: true))
+    @Test func builtInCutOffFitsTheKitchen() {
+        // Kitchen iPad, 2026-11-10: lights on 0.35–0.50; lights off 0.25 one time, 0.15 another.
+        let cutOff = KioskController.darkThreshold
+        for dark in [0.15, 0.20, 0.25] {
+            #expect(KioskController.isDark(brightness: dark, threshold: cutOff, wasDark: false))
+        }
+        for lit in [0.35, 0.40, 0.50] {
+            #expect(!KioskController.isDark(brightness: lit, threshold: cutOff, wasDark: true))
+            #expect(!KioskController.isDark(brightness: lit, threshold: cutOff, wasDark: false))
+        }
+        // In between, it keeps whatever it was, so it doesn't flicker while Auto-Brightness ramps.
+        #expect(KioskController.isDark(brightness: 0.30, threshold: cutOff, wasDark: true))
+        #expect(!KioskController.isDark(brightness: 0.30, threshold: cutOff, wasDark: false))
     }
 
     @Test func darknessHasHysteresis() {

@@ -275,14 +275,7 @@ struct KitchenDisplaySettings: View {
             }
 
             Section {
-                Toggle("When the room is dark", isOn: $kiosk.darkRoomEnabled)
-                if kiosk.darkRoomEnabled {
-                    LabeledContent("Light level now") {
-                        Text("\(Int((kiosk.screenBrightness * 100).rounded()))% · \(kiosk.roomIsDark ? "dark" : "light")")
-                            .monospacedDigit()
-                    }
-                    Button("It's Dark Now", systemImage: "moon.fill") { kiosk.markRoomDarkNow() }
-                }
+                Toggle("When the lights go off", isOn: $kiosk.darkRoomEnabled)
                 Toggle("At set hours", isOn: $kiosk.sleepEnabled)
                 if kiosk.sleepEnabled {
                     DatePicker("From", selection: timeBinding($kiosk.sleepStart), displayedComponents: .hourAndMinute)
@@ -297,7 +290,7 @@ struct KitchenDisplaySettings: View {
             } header: {
                 Text("Night clock")
             } footer: {
-                Text("A touch brings the calendar back. For the dark room, keep Auto-Brightness on and tap “It's Dark Now” once with the lights off.")
+                Text("A touch brings the calendar back. “When the lights go off” needs Auto-Brightness on (Settings → Accessibility → Display & Text Size).")
             }
 
             if let problem = weatherProblem {

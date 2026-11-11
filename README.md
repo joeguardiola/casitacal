@@ -83,7 +83,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 ### Kitchen display
 - **Header:** big clock and date, plus current weather and today's high and low. Tap the weather for a 5-day forecast.
 - **Photo slideshow when idle:** after a few minutes untouched, the iPad becomes a photo frame. It shows an album you choose (ideally an iCloud Shared Album the whole family adds to), with the time, weather and next event on top.
-- **Night clock:** turns on about 10 seconds after the kitchen lights go off, using the screen brightness that Auto-Brightness picks (tap **It's Dark Now** once with the lights off so the iPad learns your room). It can also come on at set night hours, when the screen dims to a soft clock. A touch brings the calendar back.
+- **Night clock:** turns on about 10 seconds after the kitchen lights go off, using the screen brightness that Auto-Brightness picks (no setup; keep Auto-Brightness on). It can also come on at set night hours, when the screen dims to a soft clock. A touch brings the calendar back.
 - **Walk-up wake (optional):** during the slideshow, the front camera looks for a face and wakes the display when someone walks up. Frames are checked on the iPad and never recorded or saved.
 - Waking always returns to the **calendar, showing today**.
 - **Weather** shows the town it's for (e.g. "Oak Creek, WI").
@@ -213,7 +213,7 @@ Or just put their name in the title: *"Emma piano"*.
 - **Daily Info ›:** which topics rotate next to the weather, and the Catholic feast-day options.
 - **Kitchen Display ›** (iPad):
   - Slideshow: the idle delay (off, or 2, 5, 10, 15 or 30 minutes), the album, and walk-up wake.
-  - Night clock: when the room is dark (with **It's Dark Now**), and at set hours (10:00 PM to 6:30 AM by default) with its brightness.
+  - Night clock: when the lights go off, and at set hours (10:00 PM to 6:30 AM by default) with its brightness.
   - Weather appears here only when something's wrong with it.
 - Sync and weather status lines show only when there's a problem.
 

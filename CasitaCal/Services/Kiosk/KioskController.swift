@@ -34,21 +34,22 @@ final class KioskController {
     var sleepBrightness: Double { didSet { save() } }
     /// Also show the night clock whenever the room is dark (via Auto-Brightness).
     var darkRoomEnabled: Bool { didSet { save(); evaluate() } }
-    /// Screen brightness at or below which the room counts as dark.
-    var darkThreshold: Double { didSet { save(); updateRoomDarkness() } }
+    /// Screen brightness (as Auto-Brightness sets it) at or below which the room counts as dark.
+    /// Built in, like the Nest Hub's low-light mode: no setup. Measured on the kitchen iPad on
+    /// 2026-11-10: lights on 0.35–0.50, lights off 0.15–0.25.
+    nonisolated static let darkThreshold = 0.27
 
-    /// Latest screen brightness (what Auto-Brightness chose), for the Settings readout.
+    /// Latest screen brightness (what Auto-Brightness chose).
     private(set) var screenBrightness: Double = 1
     private(set) var roomIsDark = false
     /// Brightness has to rise this far above the threshold before the room counts as light again.
-    nonisolated static let darkHysteresis = 0.08
+    /// One Auto-Brightness step: the kitchen iPad reads 0.25 dark and 0.35–0.50 with the lights on.
+    nonisolated static let darkHysteresis = 0.05
 
     /// How long a touch keeps the screen awake during sleep hours with the lights on.
     nonisolated static let wakeDuringSleep: TimeInterval = 2 * 60
     /// In a dark room the night clock comes on this soon after the last touch.
     nonisolated static let wakeInDarkRoom: TimeInterval = 10
-    /// Added to the reading when "It's dark now" sets the cut-off, so small wobbles still count as dark.
-    nonisolated static let darkMargin = 0.04
     /// How long a slideshow started by hand keeps running at night before the dark clock takes over.
     nonisolated static let manualSlideshowAtNight: TimeInterval = 30 * 60
 
@@ -67,7 +68,7 @@ final class KioskController {
                                   minute: defaults.object(forKey: "kiosk.sleepEndM") as? Int ?? 30)
         sleepBrightness = defaults.object(forKey: "kiosk.sleepBrightness") as? Double ?? 0.05
         darkRoomEnabled = defaults.object(forKey: "kiosk.darkRoom") as? Bool ?? true
-        darkThreshold = defaults.object(forKey: "kiosk.darkThreshold") as? Double ?? 0.15
+        defaults.removeObject(forKey: "kiosk.darkThreshold") // no longer a setting
         presenceEnabled = defaults.object(forKey: "kiosk.presence") as? Bool ?? false
     }
 
@@ -143,19 +144,7 @@ final class KioskController {
     private func updateRoomDarkness() {
         guard !isDimmed, let screen else { return }
         screenBrightness = Double(screen.brightness)
-        roomIsDark = Self.isDark(brightness: screenBrightness, threshold: darkThreshold, wasDark: roomIsDark)
-    }
-
-    /// "It's dark now": the current Auto-Brightness level, plus a little, becomes the cut-off.
-    func markRoomDarkNow() {
-        updateRoomDarkness()
-        darkThreshold = Self.threshold(forDarkReading: screenBrightness)
-        roomIsDark = true
-        evaluate()
-    }
-
-    nonisolated static func threshold(forDarkReading brightness: Double) -> Double {
-        min(max(brightness + darkMargin, 0.03), 0.6)
+        roomIsDark = Self.isDark(brightness: screenBrightness, threshold: Self.darkThreshold, wasDark: roomIsDark)
     }
 
     nonisolated static func isDark(brightness: Double, threshold: Double, wasDark: Bool) -> Bool {
@@ -230,7 +219,6 @@ final class KioskController {
         defaults.set(sleepEnd.minute, forKey: "kiosk.sleepEndM")
         defaults.set(sleepBrightness, forKey: "kiosk.sleepBrightness")
         defaults.set(darkRoomEnabled, forKey: "kiosk.darkRoom")
-        defaults.set(darkThreshold, forKey: "kiosk.darkThreshold")
         defaults.set(presenceEnabled, forKey: "kiosk.presence")
     }
 }
