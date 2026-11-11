@@ -3,6 +3,12 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.5.2
+
+- The header's daily card moves to its own row instead of shrinking to an icon when the top row is full (seven or more family members, or the TestFlight expiry warning)
+- Opening the app no longer drops straight into the slideshow or night clock
+- If a change can't be saved, Settings → Household now says so instead of quietly undoing it
+
 ## 0.5.1
 
 - Fixed the header banner: on the kitchen iPad it kept jumping to a second row (squeezing the calendar) and sometimes showed only its icon with no text

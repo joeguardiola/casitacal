@@ -5,11 +5,22 @@ import SwiftUI
 struct HeaderBar: View {
     @Environment(MemberStore.self) private var members
     @Environment(DailyInfoStore.self) private var daily
-    @State private var isNarrow = false
+    @State private var width: CGFloat = 0
 
     private var showsDaily: Bool { !daily.enabledTopics.isEmpty }
-    /// In portrait there's no room for the daily card beside the clock and the family.
-    private var usesSecondRow: Bool { showsDaily && isNarrow }
+    private var expiryDays: Int? { AppVersion.daysUntilExpiry.flatMap { $0 <= 14 ? $0 : nil } }
+    /// The card moves to its own row when the top row can't give it room for its text:
+    /// portrait, a big family, or the TestFlight warning taking space.
+    private var usesSecondRow: Bool {
+        showsDaily && Self.roomForCard(width: width, members: members.members.count, showsExpiry: expiryDays != nil) < 220
+    }
+
+    /// Width left for the daily card in the top row. Clock + date (longest date) and weather are
+    /// about 360 pt with their spacing; each avatar is 54 pt plus 14 between; the warning ~340 pt.
+    nonisolated static func roomForCard(width: CGFloat, members: Int, showsExpiry: Bool) -> CGFloat {
+        let family = members > 0 ? CGFloat(members) * 68 - 14 + 16 : 0
+        return width - 56 - 360 - family - (showsExpiry ? 356 : 0)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -25,7 +36,7 @@ struct HeaderBar: View {
         // the daily card is in. (Measuring the content made the card flip between rows forever.)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Palette.canvas)
-        .onGeometryChange(for: Bool.self) { $0.size.width < 1000 } action: { isNarrow = $0 }
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
     }
 
     private var mainRow: some View {
@@ -53,7 +64,7 @@ struct HeaderBar: View {
             }
 
             // Safety net: if a fresh TestFlight build hasn't arrived, say so well before it stops opening.
-            if let days = AppVersion.daysUntilExpiry, days <= 14 {
+            if let days = expiryDays {
                 Label("Update CasitaCal in TestFlight (\(max(days, 0)) days left)", systemImage: "exclamationmark.arrow.circlepath")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(.orange)

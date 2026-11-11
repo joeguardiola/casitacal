@@ -254,3 +254,19 @@ struct WeekColumnChoiceTests {
         #expect(DayLayout.agenda([feast, late, allDay], on: day).map(\.id) == ["trip", "late", "feast"])
     }
 }
+
+@MainActor
+struct HeaderRowTests {
+    // Header widths: 11" iPad (kitchen) landscape 1084 pt, portrait 724 pt; 13" landscape 1280 pt.
+    @Test func cardStaysInTheTopRowOnTheKitchenIPad() {
+        #expect(HeaderBar.roomForCard(width: 1084, members: 4, showsExpiry: false) >= 220)
+        #expect(HeaderBar.roomForCard(width: 1084, members: 6, showsExpiry: false) >= 220)
+        #expect(HeaderBar.roomForCard(width: 1280, members: 4, showsExpiry: true) >= 220)
+    }
+
+    @Test func cardMovesDownRatherThanLosingItsText() {
+        #expect(HeaderBar.roomForCard(width: 724, members: 4, showsExpiry: false) < 220)  // portrait
+        #expect(HeaderBar.roomForCard(width: 1084, members: 7, showsExpiry: false) < 220) // big family
+        #expect(HeaderBar.roomForCard(width: 1084, members: 4, showsExpiry: true) < 220)  // TestFlight warning
+    }
+}

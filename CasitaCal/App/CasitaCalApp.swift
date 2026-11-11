@@ -12,6 +12,7 @@ struct CasitaCalApp: App {
     @State private var kiosk = KioskController()
     @State private var reminders = RemindersStore()
     @State private var daily = DailyInfoStore()
+    @Environment(\.scenePhase) private var scenePhase
 
     init() {
         let persistence = Persistence.shared
@@ -48,6 +49,11 @@ struct CasitaCalApp: App {
                     guard UIDevice.current.userInterfaceIdiom == .pad else { return }
                     UIApplication.shared.isIdleTimerDisabled = true
                     await kiosk.start()
+                }
+                // Coming back to the app is activity: without this, the slideshow or night clock
+                // covered the screen right away because the last touch was before it went away.
+                .onChange(of: scenePhase) { _, phase in
+                    if phase == .active && UIDevice.current.userInterfaceIdiom == .pad { kiosk.registerInteraction() }
                 }
         }
     }

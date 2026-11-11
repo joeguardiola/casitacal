@@ -413,6 +413,7 @@ private extension View {
 private struct PlannedMealActions: ViewModifier {
     let meal: CDMeal?
     @Environment(\.managedObjectContext) private var context
+    @Environment(Persistence.self) private var persistence
 
     func body(content: Content) -> some View {
         if let meal, let id = meal.id?.uuidString, let title = meal.title, !title.isEmpty {
@@ -421,7 +422,7 @@ private struct PlannedMealActions: ViewModifier {
                     Button("Remove from Plan", systemImage: "trash", role: .destructive) {
                         withAnimation(.snappy) {
                             context.delete(meal) // its sides go with it
-                            try? context.save()
+                            persistence.save()
                         }
                     }
                 } preview: {
@@ -676,7 +677,7 @@ private struct MealEditor: View {
                     Section {
                         Button("Clear", systemImage: "trash", role: .destructive) {
                             if let existing { context.delete(existing) }
-                            try? context.save()
+                            persistence.save()
                             dismiss()
                         }
                     }
@@ -767,7 +768,7 @@ private struct MealEditor: View {
             recipe?.lastPlannedAt = Date()
             saveSides(on: meal)
         }
-        try? context.save()
+        persistence.save()
         dismiss()
     }
 

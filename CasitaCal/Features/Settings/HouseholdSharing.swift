@@ -77,6 +77,14 @@ private struct SyncStatusRows: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { _ in
+            if let failed = persistence.lastSaveError {
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("A change couldn't be saved · \(failed.date.formatted(.relative(presentation: .named)))",
+                          systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.orange)
+                    Text(failed.text).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
+                }
+            }
             if let problem = persistence.syncProblem {
                 VStack(alignment: .leading, spacing: 4) {
                     Label("iCloud \(problem.kind.lowercased()) failed (\(problem.store)) · \(problem.date.formatted(.relative(presentation: .named)))",

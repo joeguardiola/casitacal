@@ -32,6 +32,8 @@ final class Persistence {
     /// Bumped whenever the active household may have changed (remote import, share accepted).
     private(set) var revision = 0
     private(set) var lastShareError: String?
+    /// A change that couldn't be saved (and was undone), shown in Settings → Household.
+    private(set) var lastSaveError: (date: Date, text: String)?
 
     /// Latest iCloud sync activity, for the status line in Settings.
     struct SyncEvent: Equatable {
@@ -308,8 +310,12 @@ final class Persistence {
 
     func save() {
         guard context.hasChanges else { return }
-        do { try context.save() } catch {
-            assertionFailure("Save failed: \(error)")
+        do {
+            try context.save()
+            lastSaveError = nil
+        } catch {
+            print("Save failed: \(Self.describe(error))")
+            lastSaveError = (Date(), Self.describe(error))
             context.rollback()
         }
     }
