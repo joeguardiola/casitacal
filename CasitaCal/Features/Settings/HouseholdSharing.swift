@@ -47,7 +47,7 @@ struct HouseholdSharingSection: View {
         } header: {
             Text("Family sharing")
         } footer: {
-            Text("Send an invite by Messages or Mail. Once accepted on their iPhone (in CasitaCal), chores, lists, meals and family members stay in sync. Phones on the same Apple ID as this iPad sync automatically — no invite needed.")
+            Text("Invite by Messages or Mail. Devices on this iPad's Apple ID sync without an invite.")
         }
     }
 
@@ -71,7 +71,7 @@ struct HouseholdSharingSection: View {
     }
 }
 
-/// "iCloud: synced 2 min ago" — and the full error when something's wrong.
+/// Shown only when iCloud sync has a problem, with the full error.
 private struct SyncStatusRows: View {
     @Environment(Persistence.self) private var persistence
 
@@ -86,12 +86,6 @@ private struct SyncStatusRows: View {
                         Text(text).font(.caption.monospaced()).foregroundStyle(.secondary).textSelection(.enabled)
                     }
                 }
-            } else if let last = persistence.lastSuccessfulSync {
-                Label("iCloud synced \(last.formatted(.relative(presentation: .named)))", systemImage: "checkmark.icloud")
-                    .foregroundStyle(.secondary)
-            } else {
-                Label("iCloud: waiting for first sync…", systemImage: "icloud")
-                    .foregroundStyle(.secondary)
             }
         }
     }

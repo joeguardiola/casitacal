@@ -77,7 +77,6 @@ final class DailyInfoStore {
         static let topics = "daily.topics"
         static let level = "daily.catholicLevel"
         static let onCalendar = "daily.showFeastsOnCalendar"
-        static let ascension = "daily.ascensionOnSunday"
     }
 
     private let defaults: UserDefaults
@@ -93,13 +92,6 @@ final class DailyInfoStore {
 
     var showFeastsOnCalendar: Bool {
         didSet { defaults.set(showFeastsOnCalendar, forKey: Key.onCalendar) }
-    }
-
-    var ascensionOnSunday: Bool {
-        didSet {
-            defaults.set(ascensionOnSunday, forKey: Key.ascension)
-            calendars = [:]
-        }
     }
 
     private(set) var historyByDay: [String: [HistoryFact]] = [:]
@@ -118,7 +110,6 @@ final class DailyInfoStore {
         enabledTopics = Set((defaults.stringArray(forKey: Key.topics) ?? []).compactMap(DailyTopic.init(rawValue:)))
         catholicLevel = defaults.string(forKey: Key.level).flatMap(CatholicLevel.init(rawValue:)) ?? .feastDays
         showFeastsOnCalendar = defaults.bool(forKey: Key.onCalendar)
-        ascensionOnSunday = defaults.object(forKey: Key.ascension) as? Bool ?? true
         feastEntries = DailyInfoStore.load("feasts") ?? []
         nationalDays = DailyInfoStore.load("national-days") ?? []
         affirmations = DailyInfoStore.load("affirmations") ?? []
@@ -141,7 +132,7 @@ final class DailyInfoStore {
 
     private func liturgicalCalendar(_ year: Int) -> LiturgicalCalendar {
         if let c = calendars[year] { return c }
-        let c = LiturgicalCalendar(year: year, entries: feastEntries, ascensionOnSunday: ascensionOnSunday)
+        let c = LiturgicalCalendar(year: year, entries: feastEntries)
         calendars[year] = c
         return c
     }
@@ -152,19 +143,34 @@ final class DailyInfoStore {
         return catholicLevel == .holyDays ? found.filter(\.isHolyDay) : found
     }
 
-    /// All-day calendar items for the feasts in `range`. A real event with the same title wins.
-    func feastOverlay(in range: DateInterval, existing: [CalendarEvent]) -> [CalendarEvent] {
-        guard isOn(.catholic), showFeastsOnCalendar else { return [] }
+    /// All-day calendar items for the feasts in `range`: every pinned feast, plus every feast when
+    /// "Show every feast on the calendar" is on. A real event with the same title wins (feasts added to Google
+    /// before pins existed).
+    func feastOverlay(in range: DateInterval, existing: [CalendarEvent], pinned: [PinnedFeast] = []) -> [CalendarEvent] {
+        let showAll = isOn(.catholic) && showFeastsOnCalendar
+        guard showAll || !pinned.isEmpty else { return [] }
         let cal = Calendar.app
+        let pinsByDay = Dictionary(grouping: pinned, by: \.day)
         var overlay: [CalendarEvent] = []
         var day = cal.startOfDay(for: range.start)
         while day < range.end {
             guard let next = cal.date(byAdding: .day, value: 1, to: day) else { break }
-            for c in celebrations(on: day) where !Self.isOnCalendar(c.entry.name, day: day, events: existing) {
+            let key = DayKey.from(day)
+            var seen: Set<String> = []
+            var titles: [(feastID: String, title: String)] = []
+            for pin in pinsByDay[key] ?? [] where seen.insert(pin.feastID).inserted {
+                titles.append((pin.feastID, pin.title))
+            }
+            if showAll {
+                for c in celebrations(on: day) where seen.insert(c.entry.id).inserted {
+                    titles.append((c.entry.id, c.entry.name))
+                }
+            }
+            for (feastID, title) in titles where !title.isEmpty && !Self.isOnCalendar(title, day: day, events: existing) {
                 overlay.append(CalendarEvent(
-                    id: "feast-\(c.id)", title: c.entry.name, start: day, end: next, isAllDay: true,
+                    id: "feast-\(feastID)-\(key)", title: title, start: day, end: next, isAllDay: true,
                     location: nil, notes: nil, colorId: nil, taggedMemberIDs: [], recurringEventId: nil, htmlLink: nil,
-                    feastOverlayDay: c.dayKey
+                    feastOverlayDay: key
                 ))
             }
             day = next

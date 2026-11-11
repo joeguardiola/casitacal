@@ -1,25 +1,21 @@
 import SwiftUI
 
-/// Top bar: big clock + date, weather slot, and the member filter avatars.
+/// Top bar: big clock + date, weather, the rotating daily card, and the member filter avatars.
+/// The daily card takes whatever room the family leaves, so it's wider with fewer members.
 struct HeaderBar: View {
     @Environment(MemberStore.self) private var members
     @Environment(DailyInfoStore.self) private var daily
     @State private var isNarrow = false
 
     private var showsDaily: Bool { !daily.enabledTopics.isEmpty }
-    /// In portrait there's no room for both cards beside the clock and the family.
+    /// In portrait there's no room for the daily card beside the clock and the family.
     private var usesSecondRow: Bool { showsDaily && isNarrow }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             mainRow
             if usesSecondRow {
-                HStack(spacing: 16) {
-                    DailyInfoChip(maxWidth: 380)
-                        .layoutPriority(1)
-                    TonightDinnerCard()
-                    Spacer(minLength: 0)
-                }
+                DailyInfoChip(maxWidth: .infinity)
             }
         }
         .foregroundStyle(Palette.ink)
@@ -44,17 +40,14 @@ struct HeaderBar: View {
             .fixedSize()
 
             WeatherBadge()
+                .fixedSize() // never squeezed by the daily card
 
             if showsDaily, !usesSecondRow {
-                DailyInfoChip(maxWidth: 230)
-                    .layoutPriority(1) // the dinner card gives way first
+                DailyInfoChip(maxWidth: .infinity)
+                    .layoutPriority(1) // fills the room between the weather and the family
+            } else {
+                Spacer()
             }
-
-            if !usesSecondRow {
-                TonightDinnerCard()
-            }
-
-            Spacer()
 
             // Safety net: if a fresh TestFlight build hasn't arrived, say so well before it stops opening.
             if let days = AppVersion.daysUntilExpiry, days <= 14 {
@@ -63,6 +56,7 @@ struct HeaderBar: View {
                     .foregroundStyle(.orange)
                     .padding(.horizontal, 12).padding(.vertical, 8)
                     .background(.orange.opacity(0.12), in: Capsule())
+                    .fixedSize()
             }
 
             HStack(spacing: 14) {
@@ -82,7 +76,7 @@ struct HeaderBar: View {
                     .accessibilityHint(members.isVisible(member) ? "Hide \(member.name)'s items" : "Show \(member.name)'s items")
                 }
             }
-            .fixedSize() // names never get squeezed; the dinner card gives way instead
+            .fixedSize() // names never get squeezed; the daily card gives way instead
         }
     }
 }

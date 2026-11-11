@@ -15,6 +15,7 @@ final class CDHousehold: NSManagedObject {
     @NSManaged var lists: NSSet?
     @NSManaged var meals: NSSet?
     @NSManaged var recipes: NSSet?
+    @NSManaged var feastPins: NSSet?
 }
 
 @objc(CDMember)
@@ -93,6 +94,39 @@ final class CDMeal: NSManagedObject {
     @NSManaged var notes: String?
     @NSManaged var household: CDHousehold?
     @NSManaged var recipe: CDRecipe?
+    @NSManaged var sides: NSSet?
+}
+
+/// A side dish on a planned meal. Only the meal's own title (the main dish) shows on the calendar.
+@objc(CDMealSide)
+final class CDMealSide: NSManagedObject {
+    @NSManaged var id: UUID?
+    @NSManaged var title: String?
+    @NSManaged var sortOrder: Int16
+    @NSManaged var createdAt: Date?
+    @NSManaged var meal: CDMeal?
+    @NSManaged var recipe: CDRecipe?
+}
+
+/// A feast day someone added to the calendar. Shown at the bottom of that day; never sent to Google.
+@objc(CDFeastPin)
+final class CDFeastPin: NSManagedObject {
+    @NSManaged var id: UUID?
+    /// "yyyy-MM-dd"
+    @NSManaged var day: String?
+    /// `FeastEntry.id`
+    @NSManaged var feastID: String?
+    @NSManaged var title: String?
+    @NSManaged var createdAt: Date?
+    @NSManaged var household: CDHousehold?
+}
+
+extension CDMeal {
+    var sortedSides: [CDMealSide] {
+        ((sides as? Set<CDMealSide>) ?? []).sorted {
+            ($0.sortOrder, $0.createdAt ?? .distantPast) < ($1.sortOrder, $1.createdAt ?? .distantPast)
+        }
+    }
 }
 
 /// A saved recipe (the recipe box). Imported from a link, or just a name + photo.
@@ -119,6 +153,7 @@ final class CDRecipe: NSManagedObject {
     @NSManaged var lastPlannedAt: Date?
     @NSManaged var household: CDHousehold?
     @NSManaged var meals: NSSet?
+    @NSManaged var sides: NSSet?
 }
 
 /// The Core Data model, built in code (keeps the schema reviewable in diffs).
@@ -207,6 +242,15 @@ enum CasitaModel {
             attr("notes", .stringAttributeType), attr("createdAt", .dateAttributeType), attr("lastPlannedAt", .dateAttributeType),
         ])
 
+        let side = entity(CDMealSide.self, [
+            attr("id", .UUIDAttributeType), attr("title", .stringAttributeType),
+            attr("sortOrder", .integer16AttributeType, default: 0), attr("createdAt", .dateAttributeType),
+        ])
+        let feastPin = entity(CDFeastPin.self, [
+            attr("id", .UUIDAttributeType), attr("day", .stringAttributeType), attr("feastID", .stringAttributeType),
+            attr("title", .stringAttributeType), attr("createdAt", .dateAttributeType),
+        ])
+
         link(household, "members", to: member, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         link(household, "chores", to: chore, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         link(household, "lists", to: list, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
@@ -216,9 +260,13 @@ enum CasitaModel {
         link(household, "recipes", to: recipe, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
         // Deleting a recipe keeps the planned meals (they just lose the link).
         link(recipe, "meals", to: meal, toMany: true, inverse: "recipe", inverseToMany: false, cascade: false)
+        // Clearing a meal clears its sides; deleting a recipe keeps the side (it just loses the link).
+        link(meal, "sides", to: side, toMany: true, inverse: "meal", inverseToMany: false, cascade: true)
+        link(recipe, "sides", to: side, toMany: true, inverse: "recipe", inverseToMany: false, cascade: false)
+        link(household, "feastPins", to: feastPin, toMany: true, inverse: "household", inverseToMany: false, cascade: true)
 
         let model = NSManagedObjectModel()
-        model.entities = [household, member, chore, completion, list, item, meal, recipe]
+        model.entities = [household, member, chore, completion, list, item, meal, recipe, side, feastPin]
         return model
     }
 }

@@ -60,6 +60,71 @@ struct MealPlanTests {
         _ = try move(tacos, "2026-11-12", "dinner")
         #expect(!persistence.context.hasChanges)
     }
+
+    // MARK: Sides
+
+    func recipe(_ title: String) -> CDRecipe {
+        let r = persistence.insert(CDRecipe.self)
+        r.id = UUID()
+        r.title = title
+        return r
+    }
+
+    func sides(_ day: String) -> [String] {
+        MealPlan.meal(day: day, context: persistence.context)?.sortedSides.compactMap(\.title) ?? []
+    }
+
+    @Test func sidesNeedADinner() {
+        #expect(!MealPlan.addSide(title: "Salad", day: "2026-11-09", persistence: persistence))
+    }
+
+    @Test func sidesAddInOrder() {
+        meal("Tacos", "2026-11-09", "dinner")
+        MealPlan.addSide(title: "Rice", day: "2026-11-09", persistence: persistence)
+        MealPlan.addSide(title: "Beans", recipe: recipe("Charro beans"), day: "2026-11-09", persistence: persistence)
+        #expect(sides("2026-11-09") == ["Rice", "Beans"])
+        #expect(MealPlan.meal(day: "2026-11-09", context: persistence.context)?.sortedSides.last?.recipe?.title == "Charro beans")
+    }
+
+    @Test func sidesMoveWithTheirMeal() throws {
+        let tacos = meal("Tacos", "2026-11-09", "dinner")
+        meal("Soup", "2026-11-10", "dinner")
+        MealPlan.addSide(title: "Rice", day: "2026-11-09", persistence: persistence)
+        MealPlan.addSide(title: "Bread", day: "2026-11-10", persistence: persistence)
+        _ = try move(tacos, "2026-11-10", "dinner")
+        #expect(sides("2026-11-10") == ["Rice"])
+        #expect(sides("2026-11-09") == ["Bread"])
+    }
+
+    @Test func clearingAMealClearsItsSides() throws {
+        let tacos = meal("Tacos", "2026-11-09", "dinner")
+        MealPlan.addSide(title: "Rice", day: "2026-11-09", persistence: persistence)
+        persistence.context.delete(tacos)
+        persistence.save()
+        let request = NSFetchRequest<CDMealSide>(entityName: "CDMealSide")
+        #expect(try persistence.context.count(for: request) == 0)
+    }
+
+    @Test func planningADinnerLinksTheRecipeAndKeepsSides() {
+        meal("Tacos", "2026-11-09", "dinner")
+        MealPlan.addSide(title: "Rice", day: "2026-11-09", persistence: persistence)
+        let pie = recipe("Shepherd's pie")
+        MealPlan.planDinner(title: "Shepherd's pie", recipe: pie, day: "2026-11-09", persistence: persistence)
+        let dinner = MealPlan.meal(day: "2026-11-09", context: persistence.context)
+        #expect(dinner?.title == "Shepherd's pie")
+        #expect(dinner?.recipe == pie)
+        #expect(pie.lastPlannedAt != nil)
+        #expect(sides("2026-11-09") == ["Rice"])
+    }
+
+    @Test func deletingARecipeKeepsTheSide() {
+        meal("Tacos", "2026-11-09", "dinner")
+        let beans = recipe("Charro beans")
+        MealPlan.addSide(title: "Beans", recipe: beans, day: "2026-11-09", persistence: persistence)
+        persistence.context.delete(beans)
+        persistence.save()
+        #expect(sides("2026-11-09") == ["Beans"])
+    }
 }
 
 struct RecipeSearchTests {

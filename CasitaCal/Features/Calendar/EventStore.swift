@@ -97,6 +97,27 @@ final class EventStore {
     }
 
     /// Google's natural-language add ("Soccer Tue 4pm"), then tag people if any were picked.
+    /// Google's quick add puts an entry with no day ("Soccer 4pm") on today. When the sheet was
+    /// opened for another day, name that day, unless the text already gives one.
+    nonisolated static func quickAddText(_ text: String, day: Date, now: Date = .now, calendar: Calendar = .app) -> String {
+        guard !calendar.isDate(day, inSameDayAs: now) else { return text }
+        let words = Set(text.lowercased().split { !$0.isLetter }.map(String.init))
+        if !words.isDisjoint(with: ["today", "tonight"]) { return text }
+        let detector = try? NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
+        let range = NSRange(text.startIndex..., in: text)
+        // A time alone comes back as today; anything on another day means a day was named.
+        let namesADay = detector?.matches(in: text, range: range).contains { match in
+            match.date.map { !calendar.isDate($0, inSameDayAs: now) } ?? false
+        } ?? false
+        if namesADay { return text }
+        let format = DateFormatter()
+        format.locale = Locale(identifier: "en_US_POSIX")
+        format.calendar = calendar
+        format.timeZone = calendar.timeZone
+        format.dateFormat = "MMMM d, yyyy"
+        return "\(text) on \(format.string(from: day))"
+    }
+
     func quickAdd(_ text: String, people: [Member]) async throws {
         let calendarId = try requireCalendar()
         let created = try await client.quickAdd(calendarId: calendarId, text: text)

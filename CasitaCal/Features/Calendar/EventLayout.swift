@@ -84,10 +84,12 @@ enum DayLayout {
     }
 
     /// Everything on a day (all-day first, then by start), for list-style views.
+    /// Feast days go at the bottom of the day, like the dinner on the Week view.
     static func agenda(_ events: [CalendarEvent], on day: Date, calendar: Calendar = .app) -> [CalendarEvent] {
-        events
+        func rank(_ e: CalendarEvent) -> Int { e.isFeastOverlay ? 2 : (e.isAllDay ? 0 : 1) }
+        return events
             .filter { $0.overlaps(day: day, calendar: calendar) }
-            .sorted { ($0.isAllDay ? 0 : 1, $0.start, $0.title) < ($1.isAllDay ? 0 : 1, $1.start, $1.title) }
+            .sorted { (rank($0), $0.start, $0.title) < (rank($1), $1.start, $1.title) }
     }
 }
 
@@ -113,6 +115,26 @@ enum MonthCells {
 
 /// Column widths for the rolling week: equal, or one column double-width.
 enum WeekColumns {
+    /// Which column is wider. Starts on `.automatic`: today, when today is on screen.
+    enum Choice: Equatable {
+        case automatic
+        case day(Date)
+        case equal
+    }
+
+    static func widenedIndex(_ choice: Choice, days: [Date], today: Date = .now, calendar: Calendar = .app) -> Int? {
+        switch choice {
+        case .automatic: days.firstIndex { calendar.isDate($0, inSameDayAs: today) }
+        case let .day(day): days.firstIndex { calendar.isDate($0, inSameDayAs: day) }
+        case .equal: nil
+        }
+    }
+
+    /// Tapping the wide column evens them out; tapping any other widens it.
+    static func toggled(_ choice: Choice, tapped index: Int, days: [Date], today: Date = .now) -> Choice {
+        widenedIndex(choice, days: days, today: today) == index ? .equal : .day(days[index])
+    }
+
     static func widths(total: CGFloat, spacing: CGFloat, count: Int, widened: Int?) -> [CGFloat] {
         guard count > 0 else { return [] }
         let isValid = widened.map { (0..<count).contains($0) } ?? false

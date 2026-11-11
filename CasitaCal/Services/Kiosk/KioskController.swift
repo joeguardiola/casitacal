@@ -43,8 +43,12 @@ final class KioskController {
     /// Brightness has to rise this far above the threshold before the room counts as light again.
     nonisolated static let darkHysteresis = 0.08
 
-    /// How long a touch keeps the screen awake during sleep hours.
+    /// How long a touch keeps the screen awake during sleep hours with the lights on.
     nonisolated static let wakeDuringSleep: TimeInterval = 2 * 60
+    /// In a dark room the night clock comes on this soon after the last touch.
+    nonisolated static let wakeInDarkRoom: TimeInterval = 10
+    /// Added to the reading when "It's dark now" sets the cut-off, so small wobbles still count as dark.
+    nonisolated static let darkMargin = 0.04
     /// How long a slideshow started by hand keeps running at night before the dark clock takes over.
     nonisolated static let manualSlideshowAtNight: TimeInterval = 30 * 60
 
@@ -103,7 +107,7 @@ final class KioskController {
         while !Task.isCancelled {
             updateRoomDarkness()
             evaluate()
-            try? await Task.sleep(for: .seconds(10))
+            try? await Task.sleep(for: .seconds(3)) // the dark-room clock should come on within ~10 s
         }
     }
 
@@ -142,6 +146,18 @@ final class KioskController {
         roomIsDark = Self.isDark(brightness: screenBrightness, threshold: darkThreshold, wasDark: roomIsDark)
     }
 
+    /// "It's dark now": the current Auto-Brightness level, plus a little, becomes the cut-off.
+    func markRoomDarkNow() {
+        updateRoomDarkness()
+        darkThreshold = Self.threshold(forDarkReading: screenBrightness)
+        roomIsDark = true
+        evaluate()
+    }
+
+    nonisolated static func threshold(forDarkReading brightness: Double) -> Double {
+        min(max(brightness + darkMargin, 0.03), 0.6)
+    }
+
     nonisolated static func isDark(brightness: Double, threshold: Double, wasDark: Bool) -> Bool {
         wasDark ? brightness < threshold + darkHysteresis : brightness <= threshold
     }
@@ -158,7 +174,7 @@ final class KioskController {
             return .slideshow
         }
         if isNight {
-            return idle >= wakeDuringSleep ? .sleep : .active
+            return idle >= (roomIsDark ? wakeInDarkRoom : wakeDuringSleep) ? .sleep : .active
         }
         if current == .slideshow { return .slideshow } // started manually or by idle; a touch ends it
         if slideshowAfterMinutes > 0 && idle >= TimeInterval(slideshowAfterMinutes * 60) { return .slideshow }

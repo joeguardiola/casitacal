@@ -4,7 +4,8 @@ import SwiftUI
 struct DailyInfoChip: View {
     @Environment(DailyInfoStore.self) private var daily
     @State private var sheetDay: DailyDay?
-    var maxWidth: CGFloat = 230
+    /// `.infinity` lets the card take whatever room the header has left.
+    var maxWidth: CGFloat = .infinity
 
     private let rotateEvery: TimeInterval = 10
 
@@ -44,45 +45,46 @@ struct DailyInfoChip: View {
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
 
     private func card(_ item: DailyItem) -> some View {
-        HStack(spacing: 10) {
-            TopicIcon(topic: item.topic, crossHeight: 22)
-                .font(.title3)
+        HStack(spacing: 12) {
+            TopicIcon(topic: item.topic, crossHeight: 26)
+                .font(.title2)
                 .foregroundStyle(item.topic.tint)
-                .frame(width: 28)
-            VStack(alignment: .leading, spacing: 1) {
+                .frame(width: 32)
+            VStack(alignment: .leading, spacing: 2) {
                 if item.cardLine == nil {
                     Text(item.topic.shortTitle)
-                        .font(.caption.weight(.medium))
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Palette.inkSecondary)
                         .lineLimit(1)
                 }
                 Text(item.cardLine ?? item.headline)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(Palette.ink)
                     .lineLimit(item.cardLine == nil ? 2 : 3)
                     .minimumScaleFactor(0.85)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            Spacer(minLength: 0)
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .frame(minWidth: 170, maxWidth: maxWidth, minHeight: 58, alignment: .leading)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .frame(minWidth: 190, maxWidth: maxWidth, minHeight: 66, alignment: .leading)
         .background(Palette.surface, in: shape)
         .overlay(shape.strokeBorder(Palette.hairline))
     }
 
     private func iconOnly(_ item: DailyItem) -> some View {
-        TopicIcon(topic: item.topic, crossHeight: 26)
+        TopicIcon(topic: item.topic, crossHeight: 28)
             .font(.title2)
             .foregroundStyle(item.topic.tint)
-            .frame(width: 58, height: 58)
+            .frame(width: 66, height: 66)
             .background(Palette.surface, in: shape)
             .overlay(shape.strokeBorder(Palette.hairline))
     }
 }
 
 /// SF Symbols' "cross" is a medical plus and the emoji is a purple box, so this one is drawn.
-private struct LatinCross: Shape {
+struct LatinCross: Shape {
     func path(in rect: CGRect) -> Path {
         let bar = rect.width * 0.3
         var path = Path()
@@ -94,7 +96,7 @@ private struct LatinCross: Shape {
     }
 }
 
-private struct TopicIcon: View {
+struct TopicIcon: View {
     let topic: DailyTopic
     let crossHeight: CGFloat
 
@@ -118,18 +120,20 @@ struct DailyInfoSheet: View {
 
     @Environment(DailyInfoStore.self) private var daily
     @Environment(EventStore.self) private var events
-    @Environment(GoogleAuth.self) private var auth
-    @Environment(MemberStore.self) private var members
     @Environment(Persistence.self) private var persistence
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var adding: Set<String> = []
-    @State private var failure: String?
     @State private var dinnerTitle: String?
     @State private var dishToConfirm: String?
+    @State private var finding: FoodSearch?
+    /// Feasts this sheet sees as added to the calendar (refreshed after a change).
+    @State private var pinned: Set<String> = []
 
-    private var canAdd: Bool { auth.isSignedIn && events.selectedCalendarId != nil }
+    private struct FoodSearch: Identifiable {
+        var idea: String
+        var url: URL
+        var id: String { idea }
+    }
 
     var body: some View {
         NavigationStack {
@@ -154,8 +158,12 @@ struct DailyInfoSheet: View {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
             }
             .task {
-                dinnerTitle = MealPlan.dinnerTitle(day: DayKey.from(date), context: persistence.context)
+                refreshPlan()
                 await daily.refresh(for: date)
+            }
+            .sheet(item: $finding, onDismiss: refreshPlan) { search in
+                RecipeFinderSheet(dish: FoodIdea.dishName(search.idea), searchURL: search.url, day: date,
+                                  allowDinner: FoodIdea.canPlanDinner(search.idea))
             }
             .alert(
                 "Replace dinner?",
@@ -167,11 +175,6 @@ struct DailyInfoSheet: View {
             } message: { dish in
                 Text("\(dinnerTitle ?? "Something else") is planned that night. Replace it with \(dish)?")
             }
-            .background(Color.clear.alert("Couldn't add it", isPresented: Binding(get: { failure != nil }, set: { if !$0 { failure = nil } })) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text(failure ?? "")
-            })
         }
     }
 
@@ -210,7 +213,7 @@ struct DailyInfoSheet: View {
                     Link(item.linkLabel ?? "Read more", destination: link).font(.subheadline.weight(.semibold))
                     Text("From Wikipedia, CC BY-SA 4.0").font(.caption).foregroundStyle(Palette.inkSecondary)
                 }
-                if let celebration = item.celebration, canAdd { addButton(celebration) }
+                if let celebration = item.celebration { addButton(celebration) }
             }
         }
     }
@@ -270,7 +273,7 @@ struct DailyInfoSheet: View {
             if FoodIdea.hasRecipe(idea) {
                 HStack(spacing: 8) {
                     if let url = FoodIdea.recipeSearchURL(idea) {
-                        Button("Find a Recipe") { openURL(url) }
+                        Button("Find a Recipe") { finding = FoodSearch(idea: idea, url: url) }
                     }
                     if FoodIdea.canPlanDinner(idea) {
                         if dinnerTitle == dish {
@@ -317,41 +320,39 @@ struct DailyInfoSheet: View {
         }
     }
 
+    private func refreshPlan() {
+        dinnerTitle = MealPlan.dinnerTitle(day: DayKey.from(date), context: persistence.context)
+        pinned = Set(daily.celebrations(on: date).filter { FeastPins.isPinned($0, context: persistence.context) }.map(\.id))
+    }
+
+    /// Adds the feast to the bottom of the day on the calendar, for the whole household.
+    /// Nothing goes to Google; feasts added there before still count as added.
     @ViewBuilder
     private func addButton(_ c: Celebration) -> some View {
-        if DailyInfoStore.isOnCalendar(c.entry.name, day: date, events: events.events) {
-            Label("Added to family calendar", systemImage: "checkmark.circle.fill")
+        if pinned.contains(c.id) {
+            HStack(spacing: 12) {
+                Label("On the calendar", systemImage: "checkmark.circle.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.green)
+                Button("Remove", role: .destructive) {
+                    FeastPins.unpin(c, persistence: persistence)
+                    refreshPlan()
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.small)
+            }
+        } else if DailyInfoStore.isOnCalendar(c.entry.name, day: date, events: events.events) {
+            Label("On the family calendar", systemImage: "checkmark.circle.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.green)
         } else {
             Button {
-                Task { await add(c) }
+                FeastPins.pin(c, persistence: persistence)
+                refreshPlan()
             } label: {
-                if adding.contains(c.id) {
-                    ProgressView()
-                } else {
-                    Label("Add to family calendar", systemImage: "calendar.badge.plus")
-                }
+                Label("Add to calendar", systemImage: "calendar.badge.plus")
             }
             .buttonStyle(.bordered)
-            .disabled(adding.contains(c.id))
-        }
-    }
-
-    private func add(_ c: Celebration) async {
-        adding.insert(c.id)
-        defer { adding.remove(c.id) }
-        let day = Calendar.app.startOfDay(for: date)
-        var draft = EventDraft(day: day)
-        draft.title = c.entry.name
-        draft.isAllDay = true
-        draft.start = day
-        draft.end = day
-        draft.notes = c.entry.blurb
-        do {
-            try await events.create(draft, members: members.members)
-        } catch {
-            failure = error.localizedDescription
         }
     }
 
@@ -378,33 +379,59 @@ struct DailyInfoSheet: View {
     }
 }
 
-/// The per-device switches for the daily info.
-struct DailyInfoSection: View {
+/// Settings → Daily info: the per-device topic switches.
+struct DailyInfoSettings: View {
     @Environment(DailyInfoStore.self) private var daily
     private var isPad: Bool { UIDevice.current.userInterfaceIdiom == .pad }
 
     var body: some View {
         @Bindable var daily = daily
-        Section {
-            ForEach(DailyTopic.allCases.filter { isPad || $0 == .catholic }) { topic in
-                Toggle(topic.title, isOn: Binding(get: { daily.isOn(topic) }, set: { daily.set(topic, on: $0) }))
+        Form {
+            Section {
+                ForEach(DailyTopic.allCases.filter { isPad || $0 == .catholic }) { topic in
+                    Toggle(topic.title, isOn: Binding(get: { daily.isOn(topic) }, set: { daily.set(topic, on: $0) }))
+                }
+            } footer: {
+                if isPad { Text("Chosen topics rotate next to the weather. Tap the card for details.") }
             }
             if daily.isOn(.catholic) {
-                Picker("Which days", selection: $daily.catholicLevel) {
-                    ForEach(CatholicLevel.allCases) { Text($0.title).tag($0) }
-                }
-                Toggle("Show on the calendar", isOn: $daily.showFeastsOnCalendar)
-                Picker("Ascension", selection: $daily.ascensionOnSunday) {
-                    Text("Sunday").tag(true)
-                    Text("Thursday").tag(false)
+                Section {
+                    Picker("Which days", selection: $daily.catholicLevel) {
+                        ForEach(CatholicLevel.allCases) { Text($0.title).tag($0) }
+                    }
+                    Toggle("Show every feast on the calendar", isOn: $daily.showFeastsOnCalendar)
+                } header: {
+                    Text("Catholic feast days")
+                } footer: {
+                    Text("Feasts sit at the bottom of the day. Add single feasts from their details. Dates follow the U.S. calendar.")
                 }
             }
-        } header: {
-            Text("Daily info")
-        } footer: {
-            Text(isPad
-                 ? "Chosen topics show next to the weather. Tap for details. Today in history comes from Wikipedia. National days are mostly unofficial, and dates vary by source. Catholic dates follow the U.S. Catholic calendar; Boston, Hartford, New York, Omaha and Philadelphia keep Ascension on Thursday."
-                 : "Feast days appear in your schedule when “Show on the calendar” is on. Dates follow the U.S. Catholic calendar; Boston, Hartford, New York, Omaha and Philadelphia keep Ascension on Thursday.")
+        }
+        .navigationTitle("Daily Info")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+extension DailyInfoStore {
+    /// "Catholic, History", "3 topics" or "Off", for the Settings row.
+    var settingsSummary: String {
+        let on = DailyTopic.allCases.filter(isOn)
+        switch on.count {
+        case 0: return "Off"
+        case 1...2: return on.map(\.settingsLabel).joined(separator: ", ")
+        default: return "\(on.count) topics"
+        }
+    }
+}
+
+extension DailyTopic {
+    var settingsLabel: String {
+        switch self {
+        case .catholic: "Catholic"
+        case .currentEvent: "Coming Up"
+        case .nationalDay: "World Days"
+        case .history: "History"
+        case .affirmation: "Thought"
         }
     }
 }

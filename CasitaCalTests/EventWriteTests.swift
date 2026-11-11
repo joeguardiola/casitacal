@@ -107,11 +107,25 @@ struct KioskTests {
     }
 
     @Test func darkRoomShowsClockInsteadOfSlideshowDuringDay() {
-        #expect(mode(idle: 30, at: at(14), dark: true) == .active)
+        #expect(mode(idle: 5, at: at(14), dark: true) == .active)   // just touched
+        #expect(mode(idle: 10, at: at(14), dark: true) == .sleep)   // lights off: clock within ~10 s
         #expect(mode(idle: 3 * 60, at: at(14), dark: true) == .sleep)
         #expect(mode(idle: 20 * 60, at: at(14), current: .slideshow, dark: true) == .sleep)
         // Lights back on: slideshow again
         #expect(mode(idle: 20 * 60, at: at(14), current: .sleep, dark: false) == .slideshow)
+    }
+
+    @Test func nightHoursWithLightsOnWaitLonger() {
+        #expect(mode(idle: 30, at: at(23), dark: false) == .active)
+        #expect(mode(idle: 30, at: at(23), dark: true) == .sleep)
+    }
+
+    @Test func itsDarkNowSetsTheCutOffJustAboveTheReading() {
+        // The kitchen's darkest Auto-Brightness level was 0.25 with the lights on at 0.50.
+        let cutOff = KioskController.threshold(forDarkReading: 0.25)
+        #expect(abs(cutOff - 0.29) < 0.001)
+        #expect(KioskController.isDark(brightness: 0.25, threshold: cutOff, wasDark: false))
+        #expect(!KioskController.isDark(brightness: 0.50, threshold: cutOff, wasDark: true))
     }
 
     @Test func darknessHasHysteresis() {
@@ -194,5 +208,33 @@ struct ManualSlideshowTests {
 
     @Test func automaticSlideshowStillStopsAtNight() {
         #expect(mode(idle: 15, hour: 23, manual: false) == .active)
+    }
+}
+
+struct QuickAddDayTests {
+    let now = Date()
+    var thursday: Date { Calendar.app.date(byAdding: .day, value: 2, to: Calendar.app.startOfDay(for: now))! }
+    var thursdayText: String {
+        let f = DateFormatter()
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.dateFormat = "MMMM d, yyyy"
+        return f.string(from: thursday)
+    }
+
+    @Test func todayIsLeftAlone() {
+        #expect(EventStore.quickAddText("Soccer 4pm", day: now, now: now) == "Soccer 4pm")
+    }
+
+    @Test func noDayGetsTheChosenDay() {
+        #expect(EventStore.quickAddText("Soccer 4pm", day: thursday, now: now) == "Soccer 4pm on \(thursdayText)")
+        #expect(EventStore.quickAddText("Lunch with Sam", day: thursday, now: now) == "Lunch with Sam on \(thursdayText)")
+    }
+
+    @Test func aNamedDayWins() {
+        let nextWeek = Calendar.app.date(byAdding: .day, value: 8, to: now)!
+        let text = "Dentist \(nextWeek.formatted(.dateTime.month(.wide).day())) 3pm"
+        #expect(EventStore.quickAddText(text, day: thursday, now: now) == text)
+        #expect(EventStore.quickAddText("Party tomorrow at 6", day: thursday, now: now) == "Party tomorrow at 6")
+        #expect(EventStore.quickAddText("Pizza tonight", day: thursday, now: now) == "Pizza tonight")
     }
 }

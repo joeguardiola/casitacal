@@ -3,6 +3,16 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.5.0
+- Calendar Week: today is wider by default; tap anywhere in a day to widen it, double-tap a day to add an event on that day (an entry with no day in it now lands on the day you tapped)
+- Meals can have sides, each with its own recipe; the calendar still shows only the main dish
+- Meals: press and hold a planned meal for Remove from Plan; keep moving to drag it like before
+- Feast-day food: Find a Recipe opens the search inside the app; open a recipe to save it to Recipes, make it that day's dinner, or add it as a side
+- Catholic feasts added to the calendar now show at the bottom of the day for the whole household instead of going to Google; "Show every feast on the calendar" puts all of them there
+- Header: the rotating daily card is a little bigger and fills the space the family avatars leave; the dinner card is gone from the header (dinner still shows on Week and the slideshow)
+- Night clock comes on about 10 seconds after the lights go off (tested on the kitchen iPad); "It's Dark Now" in Settings sets the darkness level in one tap
+- Settings is simpler: Daily Info and Kitchen Display have their own pages, Google and week start are one Calendar section, status lines show only when something's wrong, and the Ascension choice is gone (always Sunday)
+
 ## 0.4.0
 - Meals: press and hold a meal to drag it to another day or swap it; recipe suggestions as you type; the week rolls like the Calendar; dinner shows at the bottom of each day on Week
 - Adding ingredients to a list starts with nothing ticked

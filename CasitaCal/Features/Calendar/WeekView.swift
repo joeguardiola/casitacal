@@ -1,24 +1,28 @@
 import CoreData
 import SwiftUI
 
-/// Rolling columns of stacked event cards, today on the left. Tap a day's header to widen it.
+/// Rolling columns of stacked event cards, today on the left and widened. Tap anywhere in a day
+/// to widen it (tap again to even them out); double-tap a day to add an event on it.
 struct WeekView: View {
     let days: [Date]
     let events: [CalendarEvent]
     let members: [Member]
     var onSelect: (CalendarEvent) -> Void
+    var onAdd: (Date) -> Void
 
-    @State private var widenedDay: Date?
+    @State private var widthChoice: WeekColumns.Choice = .automatic
     @State private var openRecipe: CDRecipe?
     @FetchRequest private var dinners: FetchedResults<CDMeal>
 
     private let spacing: CGFloat = 8
 
-    init(days: [Date], events: [CalendarEvent], members: [Member], onSelect: @escaping (CalendarEvent) -> Void) {
+    init(days: [Date], events: [CalendarEvent], members: [Member],
+         onSelect: @escaping (CalendarEvent) -> Void, onAdd: @escaping (Date) -> Void) {
         self.days = days
         self.events = events
         self.members = members
         self.onSelect = onSelect
+        self.onAdd = onAdd
         _dinners = FetchRequest(sortDescriptors: [], predicate: NSPredicate(
             format: "day IN %@ AND slot == %@", days.map { DayKey.from($0) }, MealSlot.dinner.rawValue
         ))
@@ -26,20 +30,25 @@ struct WeekView: View {
 
     var body: some View {
         GeometryReader { geo in
-            let widened = widenedDay.flatMap(days.firstIndex(of:))
+            let widened = WeekColumns.widenedIndex(widthChoice, days: days)
             let widths = WeekColumns.widths(total: geo.size.width, spacing: spacing, count: days.count, widened: widened)
             let dinnerByDay = Dictionary(dinners.map { ($0.day ?? "", $0) }, uniquingKeysWith: { a, _ in a })
             HStack(alignment: .top, spacing: spacing) {
                 ForEach(Array(days.enumerated()), id: \.element) { index, day in
+                    let agenda = DayLayout.agenda(events, on: day)
                     WeekDayColumn(
                         day: day,
-                        events: DayLayout.agenda(events, on: day),
+                        events: agenda.filter { !$0.isFeastOverlay },
+                        feasts: agenda.filter(\.isFeastOverlay),
                         members: members,
                         dinner: dinnerByDay[DayKey.from(day)],
                         isWidened: index == widened,
                         onToggleWidth: {
-                            withAnimation(.snappy) { widenedDay = widenedDay == day ? nil : day }
+                            withAnimation(.snappy) {
+                                widthChoice = WeekColumns.toggled(widthChoice, tapped: index, days: days)
+                            }
                         },
+                        onAdd: { onAdd(day) },
                         onSelect: onSelect,
                         onOpenRecipe: { openRecipe = $0 }
                     )
@@ -54,10 +63,12 @@ struct WeekView: View {
 private struct WeekDayColumn: View {
     let day: Date
     let events: [CalendarEvent]
+    let feasts: [CalendarEvent]
     let members: [Member]
     let dinner: CDMeal?
     let isWidened: Bool
     var onToggleWidth: () -> Void
+    var onAdd: () -> Void
     var onSelect: (CalendarEvent) -> Void
     var onOpenRecipe: (CDRecipe) -> Void
 
@@ -71,9 +82,17 @@ private struct WeekDayColumn: View {
             header
             VStack(spacing: 0) {
                 eventList
-                if let dinner, let title = dinner.title, !title.isEmpty {
-                    DinnerFooter(title: title, recipe: dinner.recipe, onOpen: onOpenRecipe)
-                        .padding(5)
+                let hasDinner = !(dinner?.title ?? "").isEmpty
+                if !feasts.isEmpty || hasDinner {
+                    VStack(spacing: 5) {
+                        ForEach(feasts) { feast in
+                            FeastFooter(title: feast.title) { onSelect(feast) }
+                        }
+                        if let dinner, let title = dinner.title, !title.isEmpty {
+                            DinnerFooter(title: title, recipe: dinner.recipe, onOpen: onOpenRecipe)
+                        }
+                    }
+                    .padding(5)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -82,6 +101,13 @@ private struct WeekDayColumn: View {
             .overlay(shape.strokeBorder(isToday ? Palette.accent.opacity(0.5) : Palette.hairline, lineWidth: isToday ? 2 : 1))
             .opacity(day < Calendar.current.startOfDay(for: .now) ? 0.6 : 1)
         }
+        // Anywhere in the column that isn't an event or a footer: tap to widen, double-tap to add.
+        .contentShape(Rectangle())
+        .onTapGesture(count: 2, perform: onAdd)
+        .onTapGesture(perform: onToggleWidth)
+        .accessibilityElement(children: .contain)
+        .accessibilityAction(named: isWidened ? "Return to equal columns" : "Make this day wider", onToggleWidth)
+        .accessibilityAction(named: "Add event", onAdd)
     }
 
     private var eventList: some View {
@@ -106,32 +132,32 @@ private struct WeekDayColumn: View {
     }
 
     /// One compact line instead of the old two-line header: more room for events.
+    /// Not a button: taps go to the whole column (single to widen, double to add).
     private var header: some View {
-        Button(action: onToggleWidth) {
-            HStack(spacing: 6) {
-                Group {
-                    if isToday {
-                        Text("Today")
-                    } else {
-                        Text(day, format: .dateTime.weekday(isWidened ? .wide : .abbreviated))
-                    }
+        HStack(spacing: 6) {
+            Group {
+                if isToday {
+                    Text("Today")
+                } else {
+                    Text(day, format: .dateTime.weekday(isWidened ? .wide : .abbreviated))
                 }
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(isToday ? Palette.accent : Palette.inkSecondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
-                Text(day, format: .dateTime.day())
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
-                    .foregroundStyle(isToday ? .white : Palette.ink)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(isToday ? Palette.accent : .clear))
             }
-            .frame(maxWidth: .infinity)
-            .contentShape(Rectangle())
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(isToday ? Palette.accent : Palette.inkSecondary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            Text(day, format: .dateTime.day())
+                .font(.system(size: 20, weight: .bold, design: .rounded))
+                .foregroundStyle(isToday ? .white : Palette.ink)
+                .frame(width: 34, height: 34)
+                .background(Circle().fill(isToday ? Palette.accent : .clear))
         }
-        .buttonStyle(.plain)
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(day.formatted(.dateTime.weekday(.wide).month(.wide).day()))
+        .accessibilityAddTraits(.isButton)
         .accessibilityHint(isWidened ? "Return to equal columns" : "Make this day wider")
+        .accessibilityAction { onToggleWidth() }
     }
 
     /// Fade and chevron at the bottom of a column while more events are below. Doesn't block touches.
@@ -147,6 +173,39 @@ private struct WeekDayColumn: View {
         .allowsHitTesting(false)
         .accessibilityHidden(true)
         .transition(.opacity)
+    }
+}
+
+/// A feast day added to the calendar (or all of them, with "Show every feast on the calendar"), shown at the
+/// bottom of the day like the dinner. Opens the day's story.
+private struct FeastFooter: View {
+    let title: String
+    var onOpen: () -> Void
+
+    private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 10, style: .continuous) }
+
+    var body: some View {
+        Button(action: onOpen) {
+            HStack(spacing: 7) {
+                LatinCross()
+                    .frame(width: 10, height: 15)
+                    .foregroundStyle(Palette.feast)
+                    .frame(width: 18)
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Palette.ink)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.85)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity, minHeight: 36, alignment: .leading)
+            .background(Palette.feast.opacity(0.13), in: shape)
+            .contentShape(shape)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Feast: \(title)")
     }
 }
 

@@ -77,7 +77,11 @@ struct AddEventSheet: View {
                 } header: {
                     Text("What's happening?")
                 } footer: {
-                    Text("Type it like you'd say it. Google figures out the day and time — e.g. “Dentist Fri 3:30pm”, “Grandma visiting Dec 20–23”.")
+                    if Calendar.app.isDateInToday(day) {
+                        Text("Type it like you'd say it. Google figures out the day and time — e.g. “Dentist Fri 3:30pm”, “Grandma visiting Dec 20–23”.")
+                    } else {
+                        Text("Type it like you'd say it — e.g. “Soccer 4pm”. With no day in it, it goes on \(day.formatted(.dateTime.weekday(.wide))).")
+                    }
                 }
                 Section("Who's it for?") {
                     PeoplePicker(chosen: $people)
@@ -93,7 +97,9 @@ struct AddEventSheet: View {
                     }
                 }
             }
-            .navigationTitle("Add to calendar")
+            .navigationTitle(Calendar.app.isDateInToday(day)
+                             ? "Add to calendar"
+                             : "Add to \(day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()))")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -125,7 +131,7 @@ struct AddEventSheet: View {
         Task {
             defer { isSaving = false }
             do {
-                try await store.quickAdd(trimmed, people: chosen)
+                try await store.quickAdd(EventStore.quickAddText(trimmed, day: day), people: chosen)
                 dismiss()
             } catch {
                 self.error = "Couldn't add: \(error.localizedDescription)"

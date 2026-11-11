@@ -331,6 +331,34 @@ struct FeastOverlayTests {
         #expect(s.feastOverlay(in: range, existing: [real]).isEmpty)
     }
 
+    var stJoseph: PinnedFeast { PinnedFeast(day: DayKey.from(range.start), feastID: "joseph", title: "Saint Joseph") }
+
+    @Test func pinnedFeastsShowWithTheSwitchOff() {
+        let defaults = UserDefaults(suiteName: "daily-tests-\(UUID().uuidString)") ?? .standard
+        let s = DailyInfoStore(defaults: defaults)
+        let overlay = s.feastOverlay(in: range, existing: [], pinned: [stJoseph])
+        #expect(overlay.map(\.title) == ["Saint Joseph"])
+        #expect(overlay.first?.isFeastOverlay == true)
+    }
+
+    @Test func pinnedAndSwitchOnDontDuplicate() throws {
+        let s = store()
+        let shown = s.feastOverlay(in: range, existing: [])
+        let id = try #require(s.celebrations(on: range.start).first?.entry.id)
+        let pin = PinnedFeast(day: DayKey.from(range.start), feastID: id, title: "Saint Joseph")
+        #expect(s.feastOverlay(in: range, existing: [], pinned: [pin, pin]).count == shown.count)
+    }
+
+    @Test func aRealEventHidesAPinnedFeast() {
+        let defaults = UserDefaults(suiteName: "daily-tests-\(UUID().uuidString)") ?? .standard
+        let s = DailyInfoStore(defaults: defaults)
+        let real = CalendarEvent(
+            id: "abc", title: "Saint Joseph", start: range.start, end: range.end, isAllDay: true,
+            location: nil, notes: nil, colorId: nil, taggedMemberIDs: [], recurringEventId: nil, htmlLink: nil
+        )
+        #expect(s.feastOverlay(in: range, existing: [real], pinned: [stJoseph]).isEmpty)
+    }
+
     @Test func oldCachesStillDecode() throws {
         let json = #"[{"id":"x","title":"T","start":0,"end":0,"isAllDay":false,"taggedMemberIDs":[]}]"#
         let events = try JSONDecoder().decode([CalendarEvent].self, from: Data(json.utf8))

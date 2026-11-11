@@ -25,7 +25,10 @@ struct CalendarScreen: View {
     @Environment(DailyInfoStore.self) private var daily
     @State private var selected: CalendarEvent?
     @State private var feastDay: DailyDay?
-    @State private var isAdding = false
+    /// The day the add-event sheet is for (the + button, or a double-tapped Week column).
+    @State private var addDay: DailyDay?
+    /// Feasts the household added to the calendar. Few rows, so all of them are fetched.
+    @FetchRequest(sortDescriptors: []) private var feastPins: FetchedResults<CDFeastPin>
 
     private var range: DateInterval {
         mode == .week
@@ -39,7 +42,7 @@ struct CalendarScreen: View {
         let real = store.events.filter {
             EventMapper.isVisible($0, members: memberStore.members, hidden: memberStore.hiddenMemberIDs)
         }
-        return real + daily.feastOverlay(in: overlayRange, existing: store.events)
+        return real + daily.feastOverlay(in: overlayRange, existing: store.events, pinned: feastPins.compactMap(\.value))
     }
 
     /// Month grids show a few days from the months either side.
@@ -79,12 +82,10 @@ struct CalendarScreen: View {
             EventDetailSheet(event: e)
         }
         .sheet(item: $feastDay) { DailyInfoSheet(date: $0.date) }
-        .sheet(isPresented: $isAdding) {
-            AddEventSheet(day: defaultAddDay)
-        }
+        .sheet(item: $addDay) { AddEventSheet(day: $0.date) }
         .overlay(alignment: .bottomTrailing) {
             if auth.isSignedIn && store.selectedCalendarId != nil {
-                Button { isAdding = true } label: {
+                Button { addDay = DailyDay(date: defaultAddDay) } label: {
                     Image(systemName: "plus")
                         .font(.system(size: 30, weight: .bold))
                         .foregroundStyle(.white)
@@ -120,7 +121,7 @@ struct CalendarScreen: View {
             switch mode {
             case .week:
                 WeekView(days: CalendarRanges.days(in: range), events: visibleEvents, members: memberStore.members,
-                         onSelect: open)
+                         onSelect: open, onAdd: { addDay = DailyDay(date: $0) })
             case .month:
                 MonthView(anchor: anchor, days: CalendarRanges.monthGrid(for: anchor), events: visibleEvents,
                           members: memberStore.members, onOpenDay: openDay)

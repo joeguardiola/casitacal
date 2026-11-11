@@ -164,6 +164,8 @@ struct RecipeChip: View {
 
 struct RecipeView: View {
     @ObservedObject var recipe: CDRecipe
+    /// The planned meal's sides, when opened from the plan.
+    var sides: [CDMealSide] = []
     /// Shown as "Change meal" when opened from the plan.
     var onEditMeal: (() -> Void)?
 
@@ -175,12 +177,14 @@ struct RecipeView: View {
     @State private var currentStep: Int?
     @State private var notes = ""
     @State private var addingToList = false
+    @State private var openSide: CDRecipe?
 
     var body: some View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 20) {
                     header
+                    if !sides.isEmpty { sidesRow }
                     if recipe.ingredientLines.isEmpty && recipe.stepLines.isEmpty {
                         noDetails
                     } else if sizeClass == .compact {
@@ -212,6 +216,43 @@ struct RecipeView: View {
             }
             .onAppear { notes = recipe.notes ?? "" }
             .sheet(isPresented: $addingToList) { AddIngredientsSheet(recipe: recipe) }
+            .sheet(item: $openSide) { RecipeView(recipe: $0) }
+        }
+    }
+
+    /// The meal's sides. Ones with a recipe open it.
+    private var sidesRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Sides").font(.headline).foregroundStyle(Palette.inkSecondary)
+            ScrollView(.horizontal) {
+                HStack(spacing: 10) {
+                    ForEach(sides, id: \.objectID) { side in
+                        Button { openSide = side.recipe } label: {
+                            HStack(spacing: 8) {
+                                if side.recipe?.imageData != nil {
+                                    RecipePhoto(recipe: side.recipe)
+                                        .frame(width: 34, height: 34)
+                                        .clipShape(Circle())
+                                }
+                                Text(side.title ?? "").font(.headline).foregroundStyle(Palette.ink)
+                                if side.recipe != nil {
+                                    Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(Palette.accent)
+                                }
+                            }
+                            .padding(.leading, side.recipe?.imageData != nil ? 5 : 14)
+                            .padding(.trailing, 14)
+                            .padding(.vertical, 5)
+                            .frame(minHeight: 44)
+                            .background(Palette.surface, in: Capsule())
+                            .overlay(Capsule().strokeBorder(Palette.hairline))
+                        }
+                        .buttonStyle(.plain)
+                        .allowsHitTesting(side.recipe != nil)
+                        .accessibilityLabel(side.recipe == nil ? "Side: \(side.title ?? "")" : "Open the \(side.title ?? "") recipe")
+                    }
+                }
+            }
+            .scrollIndicators(.hidden)
         }
     }
 

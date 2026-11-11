@@ -106,7 +106,7 @@ struct SlideshowView: View {
                         .font(.title2.weight(.semibold))
                         .padding(.top, 6)
                     }
-                    TonightDinnerCard(style: .slideshow)
+                    TonightDinnerCard()
                 }
             }
             Spacer()

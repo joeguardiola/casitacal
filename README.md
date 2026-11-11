@@ -26,7 +26,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 
 ### Calendar
 - **Three views:**
-  - **Week:** today on the left and the next days beside it (5 or 7), readable across the room. Tap a day's header to widen it. Each day shows its planned dinner at the bottom.
+  - **Week:** today on the left and the next days beside it (5 or 7), readable across the room. Today starts out wider; tap anywhere in a day to widen it instead, and double-tap a day to add an event on it. Each day shows its feast days and planned dinner at the bottom.
   - **Month:** a grid with event chips.
   - **Schedule:** a 30-day agenda.
 - **Two-way Google Calendar sync:**
@@ -59,19 +59,19 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - Tap to check off. Completed items drop to the bottom, and **Clear** removes them for everyone sharing the list.
 
 ### Meals and recipes
-- **A rolling seven-day meal plan** with today on the left and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. Show only the meals you plan.
+- **A rolling seven-day meal plan** with today on the left and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. A meal can have sides, each with its own recipe; the calendar shows only the main dish. Show only the meals you plan.
 - **Press and hold a meal to move it** to another day or slot. Drop it on a taken spot and the two swap. Hold it over a week arrow to reach another week.
 - **Paste a recipe link** and CasitaCal pulls out the photo, ingredients, steps, times and servings. It reads the schema.org recipe data most recipe sites publish, so you skip the life story and ads. Pages without recipe data still give a title and photo.
 - **Share from Safari:** on iPhone or iPad, tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
 - **Recipe box:** every recipe you add is saved, searchable by name or ingredient, and one tap to plan again.
 - **Cooking view:** big text, ingredients you can tick off, numbered steps you tap to keep your place, and your own notes ("double the garlic").
 - **Add to list…** (in a recipe's Ingredients) opens a checklist of tidied-up ingredients ("Ground beef (1 ½ pounds)") to send to a Reminders list. Nothing starts ticked, so you pick exactly what you need, and things that already look like they're on the list are flagged. Nothing is ever added automatically.
-- **Tonight's dinner** shows in the header and on the slideshow, with its photo. After 8 PM it shows tomorrow's. Tap it to open the recipe.
+- **Tonight's dinner** shows at the bottom of today on the Week view and on the slideshow, with its photo (after 8 PM the slideshow shows tomorrow's). Tap it on Week to open the recipe.
 - Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap, and typing a name offers matching saved recipes.
 
 ### Daily info
 - **Optional topics next to the weather,** all off until chosen in Settings: Catholic feast days, coming-up events, national days, today in history, and a thought for the day. Tap for details.
-- **Catholic days** follow the U.S. calendar, worked out on the device: holy days, days of obligation, and feast days, with a story and ideas for food and things to do. Moved feasts and lifted obligations are handled for each year.
+- **Catholic days** follow the U.S. calendar, worked out on the device: holy days, days of obligation, and feast days, with a story and ideas for food and things to do. Find a recipe for a feast-day dish without leaving the app and save it, plan it for dinner or add it as a side. Add a feast to the calendar and it shows at the bottom of that day on every household device. Moved feasts and lifted obligations are handled for each year.
 - **Show them on the calendar** with a setting, or use **Add to family calendar** on a single day. Nothing is added to Google by itself.
 - Events can be added without an app update by editing `docs/daily/events.json`.
 
@@ -83,7 +83,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 ### Kitchen display
 - **Header:** big clock and date, plus current weather and today's high and low. Tap the weather for a 5-day forecast.
 - **Photo slideshow when idle:** after a few minutes untouched, the iPad becomes a photo frame. It shows an album you choose (ideally an iCloud Shared Album the whole family adds to), with the time, weather and next event on top.
-- **Night clock:** during your night hours, the screen dims to a soft clock. It also shows any time the room is dark, using the screen brightness that Auto-Brightness picks. A touch wakes it for 2 minutes.
+- **Night clock:** turns on about 10 seconds after the kitchen lights go off, using the screen brightness that Auto-Brightness picks (tap **It's Dark Now** once with the lights off so the iPad learns your room). It can also come on at set night hours, when the screen dims to a soft clock. A touch brings the calendar back.
 - **Walk-up wake (optional):** during the slideshow, the front camera looks for a face and wakes the display when someone walks up. Frames are checked on the iPad and never recorded or saved.
 - Waking always returns to the **calendar, showing today**.
 - **Weather** shows the town it's for (e.g. "Oak Creek, WI").
@@ -139,7 +139,8 @@ Every event is assigned to zero or more family members. Events with nobody assig
 |---|---|
 | Switch view | **Week / Month / Schedule** at the top right |
 | Move through time | Swipe left or right, or use the **‹ ›** arrows. **Today** jumps back. |
-| Read a busy day | Tap its header in Week to widen the column |
+| Read a busy day | Tap anywhere in the day in Week to widen the column |
+| Add an event on a certain day | Double-tap that day in Week |
 | Jump to a specific day | Tap any cell in Month |
 | Hide someone's events | Tap their avatar in the header. Tap again to show them. |
 | See an event's details | Tap the event |
@@ -182,8 +183,8 @@ Or just put their name in the title: *"Emma piano"*.
 ### Photo slideshow
 1. On any family iPhone, open the **Photos** app and tap **+ → New Shared Album** (e.g. "Kitchen Frame"). Invite everyone, **including the Apple ID the iPad uses**.
 2. On the iPad, accept the invite in the Photos app.
-3. In CasitaCal, go to **Settings → Kitchen display → Slideshow photos → Allow photo access → Full Access**, then **Choose album**.
-4. Tap **Start slideshow** to preview it. It also starts by itself when the iPad sits idle (set the delay in **Settings → Kitchen display**). Tap anywhere to return to the calendar.
+3. In CasitaCal, go to **Settings → Kitchen Display → Photos → Allow photo access → Full Access**, then **Choose album**.
+4. Tap **Start slideshow** to preview it. It also starts by itself when the iPad sits idle (set the delay in **Settings → Kitchen Display**). Tap anywhere to return to the calendar.
 
 ### Chores, lists and meals how-to
 - **Add a chore:**
@@ -208,15 +209,13 @@ Or just put their name in the title: *"Emma piano"*.
   - Add, edit or remove people.
   - Set each person's name, avatar, color, adult or kid, and **Also called** nicknames (e.g. `Dad, Papa`), separated by commas.
   - Swipe a row to delete it. Tap **Edit** to reorder.
-- **Google Calendar:**
-  - See which account is signed in.
-  - Pick the **family calendar** (only calendars you can edit are listed).
-  - See the last sync time and sign out.
-- **Calendar:** choose whether the week starts on **Monday** (the default) or Sunday.
-- **Kitchen display:**
-  - Set the slideshow delay (off, or 2, 5, 10, 15 or 30 minutes; 10 is the default).
-  - Turn night mode on or off, and set its times (10:00 PM to 6:30 AM by default) and brightness.
-  - See the weather status.
+- **Calendar:** the Google account, the **family calendar** (only calendars you can edit are listed), whether the week starts on **Monday** (the default) or Sunday, and sign out.
+- **Daily Info ›:** which topics rotate next to the weather, and the Catholic feast-day options.
+- **Kitchen Display ›** (iPad):
+  - Slideshow: the idle delay (off, or 2, 5, 10, 15 or 30 minutes), the album, and walk-up wake.
+  - Night clock: when the room is dark (with **It's Dark Now**), and at set hours (10:00 PM to 6:30 AM by default) with its brightness.
+  - Weather appears here only when something's wrong with it.
+- Sync and weather status lines show only when there's a problem.
 
 ### Locking the iPad to CasitaCal (Guided Access)
 iPadOS's Guided Access keeps the kitchen iPad inside the app:

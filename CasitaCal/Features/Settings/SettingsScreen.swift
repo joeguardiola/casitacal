@@ -2,6 +2,8 @@ import SwiftUI
 
 struct SettingsScreen: View {
     @Environment(MemberStore.self) private var members
+    @Environment(DailyInfoStore.self) private var daily
+    @Environment(KioskController.self) private var kiosk
     @State private var editing: Member?
     @State private var isAdding = false
 
@@ -35,20 +37,27 @@ struct SettingsScreen: View {
                 } header: {
                     Text("Family")
                 } footer: {
-                    Text("Each person owns one Google Calendar event color. To tag an event from your phone, set its color in the Google Calendar app.")
+                    Text("Each person has a Google Calendar event color. To tag an event from your phone, give it that color.")
                 }
 
-                GoogleSettingsSection()
+                CalendarSettingsSection()
 
-                CalendarPrefsSection()
-
-                DailyInfoSection()
+                Section {
+                    NavigationLink {
+                        DailyInfoSettings()
+                    } label: {
+                        LabeledContent("Daily Info", value: daily.settingsSummary)
+                    }
+                    if UIDevice.current.userInterfaceIdiom == .pad {
+                        NavigationLink {
+                            KitchenDisplaySettings()
+                        } label: {
+                            LabeledContent("Kitchen Display", value: kiosk.settingsSummary)
+                        }
+                    }
+                }
 
                 HouseholdSharingSection()
-
-                if UIDevice.current.userInterfaceIdiom == .pad {
-                    KitchenDisplaySection()
-                }
 
                 Section("About") {
                     LabeledContent("Version", value: AppVersion.display)
@@ -171,16 +180,18 @@ struct MemberEditor: View {
     }
 }
 
-struct GoogleSettingsSection: View {
+/// Google account, the family calendar, and how weeks start.
+struct CalendarSettingsSection: View {
     @Environment(GoogleAuth.self) private var auth
     @Environment(EventStore.self) private var store
+    @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
     @State private var confirmSignOut = false
 
     var body: some View {
-        Section {
+        Section("Calendar") {
             switch auth.state {
             case let .signedIn(email, _):
-                LabeledContent("Account", value: email)
+                LabeledContent("Google account", value: email)
                 NavigationLink {
                     Form { Section { CalendarPicker() } footer: {
                         Text("Only calendars you can edit are listed.")
@@ -190,10 +201,20 @@ struct GoogleSettingsSection: View {
                 } label: {
                     LabeledContent("Family calendar", value: store.selectedCalendar?.displayName ?? "Choose…")
                 }
-                if let synced = store.lastSynced {
-                    LabeledContent("Last synced", value: synced.formatted(date: .omitted, time: .standard))
+            default:
+                Button("Sign in with Google", systemImage: "person.crop.circle.badge.checkmark") {
+                    Task { await auth.signIn(); await store.loadCalendars() }
                 }
-                Button("Sign out", role: .destructive) { confirmSignOut = true }
+            }
+            Picker("Week starts on", selection: $weekStartsOnMonday) {
+                Text("Monday").tag(true)
+                Text("Sunday").tag(false)
+            }
+            if let error = auth.lastError ?? store.lastError {
+                Text(error).font(.footnote).foregroundStyle(.red)
+            }
+            if auth.isSignedIn {
+                Button("Sign out of Google", role: .destructive) { confirmSignOut = true }
                     .confirmationDialog("Sign out of Google?", isPresented: $confirmSignOut) {
                         Button("Sign out", role: .destructive) {
                             auth.signOut()
@@ -202,37 +223,13 @@ struct GoogleSettingsSection: View {
                     } message: {
                         Text("The iPad will stop showing your calendar until you sign in again.")
                     }
-            default:
-                LabeledContent("Account", value: "Not connected")
-                Button("Sign in with Google", systemImage: "person.crop.circle.badge.checkmark") {
-                    Task { await auth.signIn(); await store.loadCalendars() }
-                }
-            }
-            if let error = auth.lastError ?? store.lastError {
-                Text(error).font(.footnote).foregroundStyle(.red)
-            }
-        } header: {
-            Text("Google Calendar")
-        } footer: {
-            Text("Sign-in is stored securely in the iPad's Keychain.")
-        }
-    }
-}
-
-struct CalendarPrefsSection: View {
-    @AppStorage(Calendar.weekStartsOnMondayKey) private var weekStartsOnMonday = true
-
-    var body: some View {
-        Section("Calendar") {
-            Picker("Week starts on", selection: $weekStartsOnMonday) {
-                Text("Monday").tag(true)
-                Text("Sunday").tag(false)
             }
         }
     }
 }
 
-struct KitchenDisplaySection: View {
+/// Settings → Kitchen display: what the iPad does when nobody's touching it.
+struct KitchenDisplaySettings: View {
     @Environment(KioskController.self) private var kiosk
     @Environment(PhotoLibrary.self) private var photos
     @Environment(WeatherStore.self) private var weather
@@ -241,75 +238,85 @@ struct KitchenDisplaySection: View {
 
     var body: some View {
         @Bindable var kiosk = kiosk
-        Section {
-            Picker("Photo slideshow when idle", selection: $kiosk.slideshowAfterMinutes) {
-                Text("Off").tag(0)
-                ForEach([2, 5, 10, 15, 30], id: \.self) { Text("After \($0) min").tag($0) }
-            }
-            Button { choosingPhotos = true } label: {
-                LabeledContent("Slideshow photos") {
-                    HStack(spacing: 6) {
-                        Text(photos.selectedAlbum?.title ?? "Choose an album")
-                        Image(systemName: "chevron.right")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(.tertiary)
+        Form {
+            Section("Slideshow") {
+                Picker("Start when idle", selection: $kiosk.slideshowAfterMinutes) {
+                    Text("Off").tag(0)
+                    ForEach([2, 5, 10, 15, 30], id: \.self) { Text("After \($0) min").tag($0) }
+                }
+                Button { choosingPhotos = true } label: {
+                    LabeledContent("Photos") {
+                        HStack(spacing: 6) {
+                            Text(photos.selectedAlbum?.title ?? "Choose an album")
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
+                        }
                     }
                 }
-            }
-            .tint(.primary)
-            .sheet(isPresented: $choosingPhotos) { PhotosScreen() }
-            Toggle(isOn: Binding(
-                get: { kiosk.presenceEnabled },
-                set: { on in
-                    if on { Task { cameraRefused = !(await kiosk.enablePresence()) } } else { kiosk.presenceEnabled = false }
+                .tint(.primary)
+                .sheet(isPresented: $choosingPhotos) { PhotosScreen() }
+                Toggle(isOn: Binding(
+                    get: { kiosk.presenceEnabled },
+                    set: { on in
+                        if on { Task { cameraRefused = !(await kiosk.enablePresence()) } } else { kiosk.presenceEnabled = false }
+                    }
+                )) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Wake when someone walks up")
+                        Text("Uses the front camera. Nothing is recorded.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 }
-            )) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Wake when someone walks up")
-                    Text("Front camera looks for a face during the slideshow. Nothing is recorded or saved.")
-                        .font(.caption).foregroundStyle(.secondary)
-                }
-            }
-            if cameraRefused {
-                Text("Camera access is off — turn it on in Settings → Apps → CasitaCal → Camera.")
-                    .font(.caption).foregroundStyle(.orange)
-            }
-            Toggle("Night clock at set hours", isOn: $kiosk.sleepEnabled)
-            if kiosk.sleepEnabled {
-                DatePicker("Dim at", selection: timeBinding($kiosk.sleepStart), displayedComponents: .hourAndMinute)
-                DatePicker("Wake at", selection: timeBinding($kiosk.sleepEnd), displayedComponents: .hourAndMinute)
-                HStack {
-                    Image(systemName: "sun.min")
-                    Slider(value: $kiosk.sleepBrightness, in: 0...0.4)
-                    Image(systemName: "sun.max")
+                if cameraRefused {
+                    Text("Camera access is off — turn it on in Settings → Apps → CasitaCal → Camera.")
+                        .font(.caption).foregroundStyle(.orange)
                 }
             }
-            Toggle("Night clock when the room is dark", isOn: $kiosk.darkRoomEnabled)
-            if kiosk.darkRoomEnabled {
-                LabeledContent("Light level now") {
-                    Text("\(Int((kiosk.screenBrightness * 100).rounded()))% · \(kiosk.roomIsDark ? "dark" : "light")")
-                        .monospacedDigit()
+
+            Section {
+                Toggle("When the room is dark", isOn: $kiosk.darkRoomEnabled)
+                if kiosk.darkRoomEnabled {
+                    LabeledContent("Light level now") {
+                        Text("\(Int((kiosk.screenBrightness * 100).rounded()))% · \(kiosk.roomIsDark ? "dark" : "light")")
+                            .monospacedDigit()
+                    }
+                    Button("It's Dark Now", systemImage: "moon.fill") { kiosk.markRoomDarkNow() }
                 }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Counts as dark below \(Int((kiosk.darkThreshold * 100).rounded()))%")
-                    Slider(value: $kiosk.darkThreshold, in: 0.03...0.5, step: 0.01)
+                Toggle("At set hours", isOn: $kiosk.sleepEnabled)
+                if kiosk.sleepEnabled {
+                    DatePicker("From", selection: timeBinding($kiosk.sleepStart), displayedComponents: .hourAndMinute)
+                    DatePicker("Until", selection: timeBinding($kiosk.sleepEnd), displayedComponents: .hourAndMinute)
+                    HStack {
+                        Image(systemName: "sun.min")
+                        Slider(value: $kiosk.sleepBrightness, in: 0...0.4)
+                        Image(systemName: "sun.max")
+                    }
+                    .accessibilityLabel("Night brightness")
+                }
+            } header: {
+                Text("Night clock")
+            } footer: {
+                Text("A touch brings the calendar back. For the dark room, keep Auto-Brightness on and tap “It's Dark Now” once with the lights off.")
+            }
+
+            if let problem = weatherProblem {
+                Section("Weather") {
+                    Text(problem).foregroundStyle(.orange)
                 }
             }
-            LabeledContent("Weather", value: weatherStatus)
-        } header: {
-            Text("Kitchen display")
-        } footer: {
-            Text("When the iPad sits untouched, it shows the photo slideshow — or the dark clock during your night hours or whenever the room is dark. A touch brings the calendar back (for 2 minutes at night). Dark-room detection reads the screen brightness, so keep Auto-Brightness on (Settings → Accessibility → Display & Text Size). Turn the lights off and watch “Light level now” to pick a good cut-off.")
         }
+        .navigationTitle("Kitchen Display")
+        .navigationBarTitleDisplayMode(.inline)
     }
 
-    private var weatherStatus: String {
+    /// Only shown when the weather isn't working.
+    private var weatherProblem: String? {
         switch weather.status {
-        case .ready: weather.lastUpdated.map { "Updated \($0.formatted(date: .omitted, time: .shortened))" } ?? "On"
-        case .needsLocationPermission: "Tap the weather in the header"
-        case .locationDenied: "Location is off"
+        case .ready, .idle: nil
+        case .needsLocationPermission: "Tap the weather in the header to allow location."
+        case .locationDenied: "Location is off for CasitaCal."
         case let .unavailable(why): why
-        case .idle: "—"
         }
     }
 
@@ -318,6 +325,15 @@ struct KitchenDisplaySection: View {
             get: { Calendar.current.date(from: comps.wrappedValue) ?? .now },
             set: { comps.wrappedValue = Calendar.current.dateComponents([.hour, .minute], from: $0) }
         )
+    }
+}
+
+extension KioskController {
+    /// "Slideshow after 5 min · Night clock", for the Settings row.
+    var settingsSummary: String {
+        var parts: [String] = [slideshowAfterMinutes > 0 ? "Slideshow after \(slideshowAfterMinutes) min" : "No slideshow"]
+        if darkRoomEnabled || sleepEnabled { parts.append("Night clock") }
+        return parts.joined(separator: " · ")
     }
 }
 

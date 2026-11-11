@@ -207,3 +207,50 @@ struct EventMapperTests {
         #expect(EventMapper.isVisible(event(), members: [joe, kid], hidden: [joe.id, kid.id]))
     }
 }
+
+struct WeekColumnChoiceTests {
+    var cal: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "America/Chicago")!
+        return c
+    }()
+
+    func date(_ d: Int, _ h: Int = 0) -> Date {
+        cal.date(from: DateComponents(year: 2026, month: 11, day: d, hour: h))!
+    }
+
+    var days: [Date] { (10...14).map { date($0) } }
+
+    @Test func todayIsWideByDefault() {
+        #expect(WeekColumns.widenedIndex(.automatic, days: days, today: date(10, 15), calendar: cal) == 0)
+        #expect(WeekColumns.widenedIndex(.automatic, days: days, today: date(12, 8), calendar: cal) == 2)
+    }
+
+    @Test func noWideColumnWhenTodayIsOffScreen() {
+        #expect(WeekColumns.widenedIndex(.automatic, days: days, today: date(20), calendar: cal) == nil)
+    }
+
+    @Test func chosenDayAndEqualAreKept() {
+        #expect(WeekColumns.widenedIndex(.day(date(13)), days: days, today: date(10), calendar: cal) == 3)
+        #expect(WeekColumns.widenedIndex(.equal, days: days, today: date(10), calendar: cal) == nil)
+    }
+
+    @Test func tappingTheWideColumnEvensThemOut() {
+        let today = Date()
+        let week = (0..<5).compactMap { Calendar.app.date(byAdding: .day, value: $0, to: Calendar.app.startOfDay(for: today)) }
+        #expect(WeekColumns.toggled(.automatic, tapped: 0, days: week, today: today) == .equal)
+        #expect(WeekColumns.toggled(.automatic, tapped: 2, days: week, today: today) == .day(week[2]))
+        #expect(WeekColumns.toggled(.equal, tapped: 0, days: week, today: today) == .day(week[0]))
+    }
+
+    @Test func feastsGoToTheBottomOfTheDay() {
+        let day = Calendar.app.startOfDay(for: Date())
+        let next = Calendar.app.date(byAdding: .day, value: 1, to: day)!
+        let feast = CalendarEvent(id: "feast", title: "Saint Martin", start: day, end: next, isAllDay: true,
+                                  taggedMemberIDs: [], feastOverlayDay: DayKey.from(day))
+        let allDay = CalendarEvent(id: "trip", title: "Trip", start: day, end: next, isAllDay: true, taggedMemberIDs: [])
+        let late = CalendarEvent(id: "late", title: "Late", start: day.addingTimeInterval(22 * 3600),
+                                 end: day.addingTimeInterval(23 * 3600), isAllDay: false, taggedMemberIDs: [])
+        #expect(DayLayout.agenda([feast, late, allDay], on: day).map(\.id) == ["trip", "late", "feast"])
+    }
+}
