@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Skylight-style chore chart: a column per person with big tap-to-complete cards.
+/// Chore chart: a column per person with big tap-to-complete cards.
 struct ChoresScreen: View {
     @Environment(ChoreStore.self) private var store
     @Environment(MemberStore.self) private var memberStore

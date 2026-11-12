@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Round profile avatar with a colored ring, Skylight-style.
+/// Round profile avatar with a colored ring.
 struct ProfileAvatar: View {
     let member: Member
     var size: CGFloat = 52

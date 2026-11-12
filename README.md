@@ -2,11 +2,11 @@
 
 # CasitaCal
 
-A personal, Skylight-style family calendar for a kitchen iPad.
+A family calendar for a kitchen iPad.
 
 CasitaCal turns an iPad into a wall/counter display that shows what the family is doing today and this week, color-coded by person. It reads from and writes to a **shared Google Calendar**, so everyone keeps using the normal Google Calendar app on their phones — add something on the iPad and it's on your phone; add something on your phone and it's on the iPad.
 
-> Inspired by [Skylight Calendar](https://www.skylightframe.com/) and [Kinboard](https://github.com/svenger87/kinboard). This is a personal project, not a product.
+> A personal project, not a product. Some ideas came from the open-source [Kinboard](https://github.com/svenger87/kinboard).
 
 ---
 

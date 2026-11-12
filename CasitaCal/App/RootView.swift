@@ -18,7 +18,7 @@ enum AppSection: String, CaseIterable, Identifiable {
     }
 }
 
-/// iPad: Skylight-style icon rail + header + content.
+/// iPad: icon rail + header + content.
 /// iPhone: standard tab bar (companion for chores/lists/meals).
 struct RootView: View {
     @Environment(\.horizontalSizeClass) private var sizeClass

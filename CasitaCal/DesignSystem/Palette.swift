@@ -12,7 +12,7 @@ extension Color {
     }
 }
 
-/// Warm, soft Skylight-inspired palette.
+/// Warm, soft palette.
 enum Palette {
     static let canvas = Color(light: 0xFBF7F2, dark: 0x16140F)
     static let surface = Color(light: 0xFFFFFF, dark: 0x221F1A)
@@ -30,7 +30,7 @@ enum Palette {
 extension MemberColor {
     /// Strong color: avatar rings, dots, event stripe.
     var strong: Color { Color(hex: googleHex) }
-    /// Soft pastel fill for event cards (Skylight look).
+    /// Soft pastel fill for event cards.
     var soft: Color { strong.opacity(0.18) }
 }
 

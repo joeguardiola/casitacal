@@ -1,6 +1,6 @@
 import Foundation
 
-/// A family member profile (Skylight-style). Each member owns one Google Calendar
+/// A family member profile. Each member owns one Google Calendar
 /// event color so events tagged on a phone (by picking that color) map back to them.
 struct Member: Identifiable, Codable, Hashable, Sendable {
     var id: UUID = UUID()
