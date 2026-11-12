@@ -387,6 +387,19 @@ final class Persistence {
     }
 
     /// Waits (briefly) until iCloud sync has finished starting up for the private store.
+    /// Waits for this launch's first successful download from iCloud. False if it didn't finish in
+    /// time (offline): then don't assume iCloud is empty.
+    func waitForFirstDownload(timeout: Duration = .seconds(90)) async -> Bool {
+        guard usesCloudKit else { return true }
+        let clock = ContinuousClock()
+        let deadline = clock.now + timeout
+        while clock.now < deadline {
+            if syncEvents["Download-private"]?.succeeded == true { return true }
+            try? await Task.sleep(for: .milliseconds(500))
+        }
+        return false
+    }
+
     func waitForSetup(timeout: Duration = .seconds(10)) async {
         guard usesCloudKit, syncEvents["Setup-private"]?.succeeded != true else { return }
         let clock = ContinuousClock()

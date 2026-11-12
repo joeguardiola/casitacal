@@ -187,3 +187,47 @@ struct WaitingForHouseholdView: View {
         .background(Palette.canvas)
     }
 }
+
+/// Shown only when this device holds more than one household: merges them into one, after
+/// showing exactly what will change.
+struct DuplicateHouseholdsSection: View {
+    @Environment(Persistence.self) private var persistence
+    @State private var confirming = false
+
+    var body: some View {
+        // Owners only: a phone that joined someone's household can't delete the owner's data.
+        if !persistence.isParticipant,
+           let plan = { _ = persistence.revision; return HouseholdMerge.plan(context: persistence.context) }() {
+            let summary = plan.summary
+            Section {
+                Label("This device has \(summary.removedHouseholds + 1) households", systemImage: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+                Text(description(summary))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                Button("Merge into One Household…", systemImage: "arrow.triangle.merge") { confirming = true }
+                    .confirmationDialog("Merge households?", isPresented: $confirming, titleVisibility: .visible) {
+                        Button("Merge", role: .destructive) { plan.apply(persistence: persistence) }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        Text(description(summary) + " This syncs to every device.")
+                    }
+            } header: {
+                Text("Duplicate households")
+            } footer: {
+                Text("Leftovers from test builds or a fresh install. Your family's phones see them too until they're merged.")
+            }
+        }
+    }
+
+    private func description(_ s: HouseholdMerge.Summary) -> String {
+        var parts = ["Keeps \(s.keptName)\(s.keptCounts.isEmpty ? "" : " (\(s.keptCounts))")."]
+        if !s.movedIn.isEmpty { parts.append("Moves in: \(s.movedIn.formatted(.list(type: .and))).") }
+        if !s.removedPeople.isEmpty {
+            parts.append("Removes duplicate and placeholder people: \(s.removedPeople.formatted(.list(type: .and))).")
+        }
+        parts.append("Deletes \(s.removedHouseholds) extra household\(s.removedHouseholds == 1 ? "" : "s").")
+        return parts.joined(separator: " ")
+    }
+}

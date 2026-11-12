@@ -125,6 +125,21 @@ final class MemberStore {
     /// so Google events tagged with them still match), or start with a placeholder family.
     private func migrateOrSeedIfNeeded() {
         guard persistence.isHouseholdHost else { return } // phones get members from the household
+        if persistence.usesCloudKit {
+            // A fresh install on the kitchen iPad must not start its own household while the real
+            // one is still downloading (that once added a second "Our casita" with a placeholder
+            // family). Seed only once iCloud has answered and there's still nobody.
+            Task { @MainActor [weak self] in
+                guard let self, await self.persistence.waitForFirstDownload() else { return }
+                self.seedIfEmpty()
+                self.reload()
+            }
+            return
+        }
+        seedIfEmpty()
+    }
+
+    private func seedIfEmpty() {
         let request = NSFetchRequest<CDMember>(entityName: "CDMember")
         guard (try? persistence.context.count(for: request)) == 0 else { return }
         let legacy = defaults.data(forKey: Self.legacyKey).flatMap { try? JSONDecoder().decode([Member].self, from: $0) }

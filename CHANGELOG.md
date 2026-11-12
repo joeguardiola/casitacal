@@ -3,6 +3,11 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.6.2
+
+- Fixed: a fresh install on the kitchen iPad could start a second household with the placeholder family (Joe, Mom, Kid 1, Kid 2) before iCloud finished downloading the real one; it now waits for iCloud first
+- Settings → Household: if a device ends up with more than one household, "Merge into One Household…" shows exactly what it will keep, move and remove, then merges them on every device
+
 ## 0.6.1
 
 - Meals: a meal typed as a list ("Chicken soup, crackers and blackberries") shows as the main dish with its sides, and the editor shows how it will be planned as you type; single dishes like "Mac and cheese" stay whole
