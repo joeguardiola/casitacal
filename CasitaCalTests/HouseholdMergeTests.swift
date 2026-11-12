@@ -59,14 +59,11 @@ struct HouseholdMergeTests {
 
     func count(_ entity: String) -> Int { (try? p.context.count(for: NSFetchRequest<NSManagedObject>(entityName: entity))) ?? -1 }
 
-    @Test func keepsTheRealHouseholdAndSaysWhatChanges() throws {
+    @Test func keepsTheRealHousehold() throws {
         let (real, _) = setUpKitchenIPad()
         let plan = try #require(HouseholdMerge.plan(context: p.context))
         #expect(plan.keep == real)
-        let s = plan.summary
-        #expect(s.removedHouseholds == 3)
-        #expect(Set(s.movedIn) == ["7-Can Soup", "To-do list", "Groceries list"])
-        #expect(s.removedPeople.sorted() == ["Joe", "Jonah", "Kid 1", "Kid 2", "Lauren", "Mom"])
+        #expect(plan.others.count == 3)
     }
 
     @Test func mergeLeavesOneHouseholdWithEverything() throws {

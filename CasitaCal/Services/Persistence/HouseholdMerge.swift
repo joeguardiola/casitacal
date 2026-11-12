@@ -1,15 +1,25 @@
 import CoreData
 
-/// Folds extra households on this device into one, for Settings → Household.
+/// Folds extra households into one. A one-time repair for the kitchen iPad (0.6.2).
 ///
 /// Extra households came from debug builds mixing CloudKit test data into the real database, and
-/// from a fresh install making a starter household before iCloud finished downloading. The
-/// household with the most in it is kept. From the others: people already in the kept household
-/// (same name) and the untouched starter family are removed, everything else (meals, recipes,
-/// lists, chores, feast pins) moves over, skipping exact duplicates, and the empty households are
-/// deleted. Nothing happens until `apply` (the button), and the summary says what will change.
+/// from a fresh install making a starter household before iCloud finished downloading (both fixed).
+/// The household with the most in it is kept. From the others: people already in the kept
+/// household (same name) and the untouched starter family are removed, everything else (meals,
+/// recipes, lists, chores, feast pins) moves over, skipping exact duplicates, and the empty
+/// households are deleted.
 @MainActor
 struct HouseholdMerge {
+    /// Runs the merge once on the household's owner device, after this launch's first iCloud
+    /// download (so it sees every household). Never again after that.
+    static func repairOnce(persistence: Persistence, defaults: UserDefaults = .standard) async {
+        let key = "household.duplicatesMerged"
+        guard persistence.usesCloudKit, persistence.isHouseholdHost, !persistence.isParticipant,
+              !defaults.bool(forKey: key), await persistence.waitForFirstDownload() else { return }
+        plan(context: persistence.context)?.apply(persistence: persistence)
+        defaults.set(true, forKey: key)
+    }
+
     let keep: CDHousehold
     let others: [CDHousehold]
 
@@ -23,37 +33,6 @@ struct HouseholdMerge {
         // Relationships can't cross stores, so only households in the kept one's store are merged.
         let others = all.filter { $0 != keep && $0.objectID.persistentStore == keep.objectID.persistentStore }
         return others.isEmpty ? nil : HouseholdMerge(keep: keep, others: others)
-    }
-
-    // MARK: What it will do
-
-    struct Summary: Equatable {
-        var keptName: String
-        var keptCounts: String
-        var movedIn: [String]
-        var removedPeople: [String]
-        var removedHouseholds: Int
-    }
-
-    var summary: Summary {
-        var moved: [String] = []
-        var removedPeople: [String] = []
-        for other in others {
-            for m in members(of: other) {
-                if isDuplicate(m) || isStarter(m) { removedPeople.append(m.name ?? "") } else { moved.append(m.name ?? "") }
-            }
-            moved += recipes(of: other).filter { duplicateRecipe(of: $0) == nil }.compactMap(\.title)
-            moved += lists(of: other).map { "\($0.title ?? "") list" }
-            moved += meals(of: other).filter { mealAt($0.day, $0.slot) == nil }.compactMap(\.title)
-            moved += chores(of: other).filter { !hasChore(titled: $0.title) }.compactMap(\.title)
-        }
-        return Summary(
-            keptName: keep.name ?? "Household",
-            keptCounts: Self.counts(keep),
-            movedIn: moved.filter { !$0.isEmpty },
-            removedPeople: removedPeople.filter { !$0.isEmpty },
-            removedHouseholds: others.count
-        )
     }
 
     // MARK: Doing it
@@ -105,13 +84,6 @@ struct HouseholdMerge {
 
     private static func isNewer(_ a: CDHousehold, than b: CDHousehold) -> Bool {
         (a.createdAt ?? .distantPast) > (b.createdAt ?? .distantPast)
-    }
-
-    private static func counts(_ h: CDHousehold) -> String {
-        func n(_ count: Int, _ one: String, _ many: String) -> String? { count == 0 ? nil : "\(count) \(count == 1 ? one : many)" }
-        return [n(h.members?.count ?? 0, "person", "people"), n(h.meals?.count ?? 0, "meal", "meals"),
-                n(h.recipes?.count ?? 0, "recipe", "recipes"), n(h.lists?.count ?? 0, "list", "lists"),
-                n(h.chores?.count ?? 0, "chore", "chores")].compactMap { $0 }.joined(separator: ", ")
     }
 
     private func members(of h: CDHousehold) -> [CDMember] { ((h.members as? Set<CDMember>) ?? []).sorted { ($0.sortOrder, $0.name ?? "") < ($1.sortOrder, $1.name ?? "") } }

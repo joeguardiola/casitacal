@@ -40,6 +40,7 @@ struct CasitaCalApp: App {
                 .environment(daily)
                 .onOpenURL { auth.handle(url: $0) }
                 .task { MealPlan.tagExistingSides(persistence: persistence) }
+                .task { await HouseholdMerge.repairOnce(persistence: persistence) }
                 .task {
                     await auth.restore()
                     await events.loadCalendars()

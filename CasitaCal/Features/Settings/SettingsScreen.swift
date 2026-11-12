@@ -58,7 +58,6 @@ struct SettingsScreen: View {
                 }
 
                 HouseholdSharingSection()
-                DuplicateHouseholdsSection()
 
                 Section("About") {
                     LabeledContent("Version", value: AppVersion.display)
