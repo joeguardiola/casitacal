@@ -32,7 +32,7 @@ struct MealsScreen: View {
         var id: String { cell.id }
     }
 
-    /// Planned meals with a recipe open the recipe (with its sides); everything else opens the editor.
+    /// Meals whose main dish has a recipe open it (with its sides); everything else opens the editor.
     private func open(_ cell: MealCell, _ meal: CDMeal?) {
         if let meal, let recipe = meal.recipe {
             viewing = Viewing(cell: cell, recipe: recipe, sides: meal.sortedSides)
@@ -239,7 +239,7 @@ private struct MealGrid: View {
                         .draggableMeal(meal)
                         .frame(width: dayWidth)
                         .modifier(MealDropTarget(cornerRadius: 16) { onMove($0, .init(day: key, slot: slot)) })
-                        .accessibilityLabel("\(slot.label), \(day.formatted(.dateTime.weekday(.wide))): \(meal?.title ?? "empty")")
+                        .accessibilityLabel("\(slot.label), \(day.formatted(.dateTime.weekday(.wide))): \(meal.map(MealSides.spoken) ?? "empty")")
                     }
                 }
                 .frame(height: isBig ? nil : 72)
@@ -250,43 +250,60 @@ private struct MealGrid: View {
 }
 
 private struct MealTile: View {
-    let meal: CDMeal?
+    /// The main dish; nil when only sides are planned (or nothing is).
+    let main: String?
+    /// Sides, listed under the main dish (or under "No main yet").
+    let sides: [String]
+    let photoRecipe: CDRecipe?
     let isBig: Bool
     let isToday: Bool
 
-    private var title: String? { meal?.title.flatMap { $0.isEmpty ? nil : $0 } }
-    private var hasPhoto: Bool { meal?.recipe?.imageData != nil }
-    /// "with Salad, Rolls" on the big dinner tiles; "+ 2 sides" on the small ones.
-    private var sidesText: String? { meal.flatMap { MealSides.summary($0, short: !isBig) } }
+    /// Plain values rather than the meal, so the tile redraws when its sides change.
+    init(meal: CDMeal?, isBig: Bool, isToday: Bool) {
+        main = meal.flatMap { $0.mainTitle.isEmpty ? nil : $0.mainTitle }
+        sides = meal?.sideTitles ?? []
+        photoRecipe = meal?.photoRecipe
+        self.isBig = isBig
+        self.isToday = isToday
+    }
+
+    private var isPlanned: Bool { main != nil || !sides.isEmpty }
+    private var hasPhoto: Bool { photoRecipe != nil }
+
+    /// The main dish's name, or a quiet "No main yet" so a lone side never looks like the main.
+    private func mainText(_ font: Font, color: Color, lineLimit: Int) -> some View {
+        Text(main ?? "No main yet")
+            .font(main == nil ? font.weight(.regular).italic() : font)
+            .foregroundStyle(color.opacity(main == nil ? 0.7 : 1))
+            .lineLimit(lineLimit)
+    }
+    /// One line on the small tiles: "+ Salad, Rolls".
+    private var sidesLine: String? { sides.isEmpty ? nil : "+ " + sides.joined(separator: ", ") }
     private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 16, style: .continuous) }
 
     var body: some View {
         Group {
-            if let title {
+            if isPlanned {
                 if isBig && hasPhoto {
                     ZStack(alignment: .bottomLeading) {
-                        Color.clear.overlay { RecipePhoto(recipe: meal?.recipe) }
-                        LinearGradient(colors: [.clear, .black.opacity(0.7)], startPoint: .center, endPoint: .bottom)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(title)
-                                .font(.headline)
-                                .foregroundStyle(.white)
-                                .lineLimit(3)
-                            if let sides = sidesText {
-                                Text(sides).font(.caption.weight(.medium)).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
-                            }
+                        Color.clear.overlay { RecipePhoto(recipe: photoRecipe) }
+                        LinearGradient(colors: [.clear, .black.opacity(sides.isEmpty ? 0.7 : 0.8)],
+                                       startPoint: sides.isEmpty ? .center : UnitPoint(x: 0.5, y: 0.25), endPoint: .bottom)
+                        VStack(alignment: .leading, spacing: 4) {
+                            mainText(.headline, color: .white, lineLimit: 3)
+                            SideLines(sides: sides, color: .white.opacity(0.9))
                         }
                         .padding(10)
                     }
                 } else if hasPhoto {
                     HStack(spacing: 8) {
-                        RecipePhoto(recipe: meal?.recipe)
+                        RecipePhoto(recipe: photoRecipe)
                             .frame(width: 44, height: 44)
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         VStack(alignment: .leading, spacing: 1) {
-                            Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.ink).lineLimit(2)
-                            if let sides = sidesText {
-                                Text(sides).font(.caption2).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                            mainText(.subheadline.weight(.semibold), color: Palette.ink, lineLimit: 2)
+                            if let sidesLine {
+                                Text(sidesLine).font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary).lineLimit(1)
                             }
                         }
                         Spacer(minLength: 0)
@@ -294,17 +311,13 @@ private struct MealTile: View {
                     .padding(8)
                     .background(Palette.accent.opacity(0.12))
                 } else {
-                    VStack(spacing: 3) {
-                        Text(title)
-                            .font(isBig ? .headline : .subheadline.weight(.semibold))
-                            .foregroundStyle(Palette.ink)
-                            .lineLimit(isBig ? 4 : 2)
+                    VStack(spacing: isBig ? 6 : 2) {
+                        mainText(isBig ? .headline : .subheadline.weight(.semibold), color: Palette.ink, lineLimit: isBig ? 4 : 2)
                             .minimumScaleFactor(0.8)
-                        if let sides = sidesText {
-                            Text(sides)
-                                .font(isBig ? .caption.weight(.medium) : .caption2)
-                                .foregroundStyle(Palette.inkSecondary)
-                                .lineLimit(isBig ? 3 : 1)
+                        if isBig {
+                            SideLines(sides: sides, color: Palette.inkSecondary, alignment: .center)
+                        } else if let sidesLine {
+                            Text(sidesLine).font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary).lineLimit(1)
                         }
                     }
                     .multilineTextAlignment(.center)
@@ -322,6 +335,31 @@ private struct MealTile: View {
         .clipShape(shape)
         .overlay(shape.strokeBorder(isToday ? Palette.accent.opacity(0.6) : Palette.hairline, lineWidth: isToday ? 2 : 1))
         .contentShape(shape)
+    }
+}
+
+/// A dinner tile's sides, one per line: "+ Salad", "+ Rolls". Past four, the rest are counted.
+private struct SideLines: View {
+    let sides: [String]
+    let color: Color
+    var alignment: HorizontalAlignment = .leading
+    private static let shown = 4
+
+    var body: some View {
+        if !sides.isEmpty {
+            VStack(alignment: alignment, spacing: 2) {
+                ForEach(Array(sides.prefix(Self.shown).enumerated()), id: \.offset) { _, side in
+                    Text("+ \(side)").lineLimit(1)
+                }
+                if sides.count > Self.shown {
+                    Text("+ \(sides.count - Self.shown) more").lineLimit(1)
+                }
+            }
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(color)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("with " + sides.formatted(.list(type: .and)))
+        }
     }
 }
 
@@ -360,15 +398,19 @@ private struct MealList: View {
                                 HStack(spacing: 10) {
                                     Text(slot.emoji)
                                     Text(slot.label).foregroundStyle(Palette.inkSecondary).frame(width: 80, alignment: .leading)
-                                    Text(meal?.title ?? "—")
-                                        .foregroundStyle(Palette.ink)
-                                        .lineLimit(1)
-                                    if let meal, let sides = MealSides.summary(meal, short: true) {
-                                        Text(sides).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        if let meal, meal.mainTitle.isEmpty, meal.isPlanned {
+                                            Text("No main yet").italic().foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                                        } else {
+                                            Text(meal?.displayTitle ?? "—").foregroundStyle(Palette.ink).lineLimit(1)
+                                        }
+                                        if let meal, let sides = MealSides.summary(meal, short: true) {
+                                            Text(sides).font(.caption).foregroundStyle(Palette.inkSecondary).lineLimit(2)
+                                        }
                                     }
                                     Spacer()
-                                    if meal?.recipe?.imageData != nil {
-                                        RecipePhoto(recipe: meal?.recipe)
+                                    if let photo = meal?.photoRecipe {
+                                        RecipePhoto(recipe: photo)
                                             .frame(width: 40, height: 40)
                                             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
                                     }
@@ -393,12 +435,18 @@ private struct MealList: View {
 }
 
 enum MealSides {
-    /// "with Salad, Rolls", or "+ 2 sides" where there's little room. Nil with no sides.
+    /// "with Salad and Rolls", or "+ Salad, Rolls" where there's little room. Nil with no sides.
     static func summary(_ meal: CDMeal, short: Bool) -> String? {
-        let titles = meal.sortedSides.compactMap(\.title).filter { !$0.isEmpty }
+        let titles = meal.sideTitles
         guard !titles.isEmpty else { return nil }
-        if short { return titles.count == 1 ? "+ 1 side" : "+ \(titles.count) sides" }
+        if short { return "+ " + titles.joined(separator: ", ") }
         return "with " + titles.formatted(.list(type: .and))
+    }
+
+    /// For VoiceOver: "Tacos, with Rice and Beans", or "No main yet, with Salad".
+    static func spoken(_ meal: CDMeal) -> String {
+        [meal.mainTitle.isEmpty ? "No main yet" : meal.mainTitle, summary(meal, short: false)]
+            .compactMap { $0 }.joined(separator: ", ")
     }
 }
 
@@ -416,7 +464,7 @@ private struct PlannedMealActions: ViewModifier {
     @Environment(Persistence.self) private var persistence
 
     func body(content: Content) -> some View {
-        if let meal, let id = meal.id?.uuidString, let title = meal.title, !title.isEmpty {
+        if let meal, let id = meal.id?.uuidString, let title = meal.displayTitle {
             content
                 .contextMenu {
                     Button("Remove from Plan", systemImage: "trash", role: .destructive) {
@@ -426,9 +474,9 @@ private struct PlannedMealActions: ViewModifier {
                         }
                     }
                 } preview: {
-                    MealDragPreview(title: title, recipe: meal.recipe)
+                    MealDragPreview(title: title, recipe: meal.photoRecipe)
                 }
-                .draggable(id) { MealDragPreview(title: title, recipe: meal.recipe) }
+                .draggable(id) { MealDragPreview(title: title, recipe: meal.photoRecipe) }
         } else {
             content
         }
@@ -487,15 +535,18 @@ final class DishDraft: Identifiable, Hashable {
     let id = UUID()
     /// The saved side this edits; nil for the main dish or a side that isn't saved yet.
     let side: CDMealSide?
+    /// New recipes made from this dish are filed under Sides.
+    let isSide: Bool
     var title: String
     var chosen: CDRecipe?
     let link = LinkImport()
     var photoData: Data?
 
-    init(title: String = "", chosen: CDRecipe? = nil, side: CDMealSide? = nil) {
+    init(title: String = "", chosen: CDRecipe? = nil, side: CDMealSide? = nil, isSide: Bool = false) {
         self.title = title
         self.chosen = chosen
         self.side = side
+        self.isSide = isSide
     }
 
     nonisolated static func == (a: DishDraft, b: DishDraft) -> Bool { a.id == b.id }
@@ -510,7 +561,10 @@ final class DishDraft: Identifiable, Hashable {
     /// The recipe to attach: a picked one, a pasted link, or just a photo (still handy to plan again).
     func resolveRecipe(persistence: Persistence) -> CDRecipe? {
         if let result = link.result {
-            return RecipeImporter.save(result.recipe, image: result.image, persistence: persistence)
+            let recipe = RecipeImporter.save(result.recipe, image: result.image, persistence: persistence)
+            // A recipe that's never been planned takes the kind of dish it's being planned as.
+            if (recipe.meals?.count ?? 0) == 0 && (recipe.sides?.count ?? 0) == 0 { recipe.isSide = isSide }
+            return recipe
         }
         if let chosen { return chosen }
         if let photoData {
@@ -541,6 +595,7 @@ final class DishDraft: Identifiable, Hashable {
         r.createdAt = Date()
         r.household = persistence.household()
         r.title = trimmedTitle
+        r.isSide = isSide
         return r
     }
 }
@@ -548,8 +603,13 @@ final class DishDraft: Identifiable, Hashable {
 /// Name, saved-recipe autocomplete, and link or photo, for the main dish and for each side.
 private struct DishFields: View {
     @Bindable var dish: DishDraft
+    var heading: String?
     var placeholder: String
+    /// Searched as you type (every saved recipe, so a main can be a side too).
     var savedRecipes: [CDRecipe]
+    /// The row of saved recipes to pick from: mains for the main dish, sides for a side.
+    var shelf: [CDRecipe]
+    var shelfTitle: String
 
     @State private var photoItem: PhotosPickerItem?
     @FocusState private var titleFocused: Bool
@@ -572,6 +632,8 @@ private struct DishFields: View {
                 }
                 .buttonStyle(.plain)
             }
+        } header: {
+            if let heading { Text(heading) }
         }
         .onChange(of: dish.link.result?.recipe) { _, new in
             if let new, dish.trimmedTitle.isEmpty { dish.title = new.title }
@@ -582,20 +644,12 @@ private struct DishFields: View {
                 dish.photoData = RecipeImporter.downscaledJPEG(data)
             }
         }
-        recipeSection
-        if !savedRecipes.isEmpty && dish.chosen == nil && dish.link.result == nil {
-            Section("From your recipes") {
-                ScrollView(.horizontal) {
-                    HStack(spacing: 12) {
-                        ForEach(savedRecipes.prefix(20), id: \.objectID) { r in
-                            Button { pick(r) } label: { RecipeChip(recipe: r) }.buttonStyle(.plain)
-                        }
-                    }
-                    .padding(.vertical, 4)
-                }
-                .scrollIndicators(.hidden)
+        if !shelf.isEmpty && dish.chosen == nil && dish.link.result == nil {
+            Section(shelfTitle) {
+                RecipeShelf(recipes: shelf, isSelected: { _ in false }, onTap: pick)
             }
         }
+        recipeSection
     }
 
     @ViewBuilder
@@ -605,7 +659,7 @@ private struct DishFields: View {
                 HStack(spacing: 12) {
                     RecipeChip(recipe: chosen, isSelected: true)
                     Spacer()
-                    Button("Remove", role: .destructive) { dish.chosen = nil }
+                    Button("Change") { dish.chosen = nil }
                 }
             } else if let result = dish.link.result {
                 ParsedRecipeCard(recipe: result.recipe, image: result.image)
@@ -626,18 +680,52 @@ private struct DishFields: View {
                 }
             }
         } header: {
-            Text("Recipe")
+            Text(dish.chosen == nil && dish.link.result == nil ? "Or a new recipe" : "Recipe")
         } footer: {
             if dish.chosen == nil && dish.link.result == nil {
-                Text("Paste a link from any recipe site — the photo, ingredients and steps come in automatically.")
+                Text("Paste a link from any recipe site — the photo, ingredients and steps come in automatically. It's saved to Recipes for next time.")
             }
         }
     }
 
     private func pick(_ recipe: CDRecipe) {
+        titleFocused = false
         dish.chosen = recipe
         dish.title = recipe.title ?? dish.title
         dish.link.clear()
+    }
+}
+
+/// A sideways row of saved recipes to tap.
+private struct RecipeShelf: View {
+    let recipes: [CDRecipe]
+    var isSelected: (CDRecipe) -> Bool
+    var onTap: (CDRecipe) -> Void
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                ForEach(recipes.prefix(30), id: \.objectID) { r in
+                    let selected = isSelected(r)
+                    Button { onTap(r) } label: {
+                        RecipeChip(recipe: r, isSelected: selected)
+                            .overlay(alignment: .topTrailing) {
+                                if selected {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.title2)
+                                        .symbolRenderingMode(.palette)
+                                        .foregroundStyle(.white, Palette.accent)
+                                        .padding(6)
+                                }
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.vertical, 4)
+        }
+        .scrollIndicators(.hidden)
     }
 }
 
@@ -654,22 +742,32 @@ private struct MealEditor: View {
     @State private var sides: [DishDraft] = []
     /// Saved sides taken off in this editor; deleted on Save, kept on Cancel.
     @State private var removedSides: [CDMealSide] = []
-    @State private var editingSide: DishDraft?
+    /// The side open in the side sheet: a new one (added on "Add") or one already on the meal.
+    @State private var sideSheet: DishDraft?
     @State private var viewingRecipe: CDRecipe?
     @State private var notes = ""
     @State private var existing: CDMeal?
-    @State private var recent: [String] = []
+    @State private var recentMains: [String] = []
+    @State private var recentSides: [String] = []
+
+    private var mains: [CDRecipe] { savedRecipes.filter { !$0.isSide } }
+    private var sideRecipes: [CDRecipe] { savedRecipes.filter(\.isSide) }
+    private var hasAnything: Bool { !main.isBlank || sides.contains { !$0.isBlank } }
 
     var body: some View {
         NavigationStack {
             Form {
-                DishFields(dish: main, placeholder: "e.g. Tacos", savedRecipes: Array(savedRecipes))
-                if !recent.isEmpty {
+                DishFields(dish: main, heading: "Main dish", placeholder: "e.g. Tacos",
+                           savedRecipes: Array(savedRecipes), shelf: mains, shelfTitle: "Your mains")
+                if !recentMains.isEmpty && main.chosen == nil {
                     Section("Recent") {
-                        FlowChips(items: recent) { main.title = $0 }
+                        FlowChips(items: recentMains) { main.title = $0 }
                     }
                 }
                 sidesSection
+                if !sideRecipes.isEmpty || !recentSides.isEmpty {
+                    addSideSection
+                }
                 Section {
                     TextField("Notes (who's cooking…)", text: $notes, axis: .vertical)
                 }
@@ -685,25 +783,20 @@ private struct MealEditor: View {
             }
             .navigationTitle("\(cell.slot.emoji) \(cell.slot.label) · \(DayKey.date(cell.day)?.formatted(.dateTime.weekday(.wide)) ?? "")")
             .navigationBarTitleDisplayMode(.inline)
-            .navigationDestination(item: $editingSide) { side in
-                Form {
-                    DishFields(dish: side, placeholder: "e.g. Garlic bread", savedRecipes: Array(savedRecipes))
-                }
-                .navigationTitle(side.trimmedTitle.isEmpty ? "Side" : side.trimmedTitle)
-                .navigationBarTitleDisplayMode(.inline)
-            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save", action: save)
                         .fontWeight(.semibold)
-                        .disabled(main.isLoading || sides.contains(where: \.isLoading))
+                        .disabled(main.isLoading || sides.contains(where: \.isLoading) || (existing == nil && !hasAnything))
                 }
             }
             .onAppear(perform: load)
-            .onChange(of: editingSide) { _, new in
-                // Back from a new side without filling anything in: drop it.
-                if new == nil { sides.removeAll { $0.side == nil && $0.isBlank } }
+            .sheet(item: $sideSheet) { side in
+                SideSheet(side: side, isNew: !sides.contains(side), savedRecipes: Array(savedRecipes),
+                          sideRecipes: sideRecipes) {
+                    if !sides.contains(side) && !side.isBlank { sides.append(side) }
+                }
             }
             .sheet(item: $viewingRecipe) { RecipeView(recipe: $0) }
         }
@@ -714,7 +807,7 @@ private struct MealEditor: View {
         Section {
             ForEach(sides) { side in
                 HStack(spacing: 12) {
-                    Button { editingSide = side } label: { SideRow(dish: side) }
+                    Button { sideSheet = side } label: { SideRow(dish: side) }
                         .buttonStyle(.plain)
                     if let recipe = side.chosen {
                         Button { viewingRecipe = recipe } label: {
@@ -729,36 +822,71 @@ private struct MealEditor: View {
                 removedSides += offsets.compactMap { sides[$0].side }
                 sides.remove(atOffsets: offsets)
             }
-            Button("Add a side", systemImage: "plus.circle") {
-                let side = DishDraft()
-                sides.append(side)
-                editingSide = side
-            }
+            Button("New side…", systemImage: "plus.circle") { sideSheet = DishDraft(isSide: true) }
         } header: {
             Text("Sides")
         } footer: {
-            if !sides.isEmpty { Text("Only the main dish shows on the calendar.") }
+            if main.isBlank && !sides.isEmpty {
+                Text("No main dish yet: the plan shows \"No main yet\" with these sides until you add one.")
+            }
+        }
+    }
+
+    /// Saved side dishes and recent side names, one tap to add or take off.
+    private var addSideSection: some View {
+        Section("Your sides") {
+            if !sideRecipes.isEmpty {
+                RecipeShelf(recipes: sideRecipes, isSelected: { r in sides.contains { $0.chosen == r } }) { r in
+                    toggleSide(r)
+                }
+            }
+            let recent = recentSides.filter { name in !sides.contains { $0.trimmedTitle == name } }
+            if !recent.isEmpty {
+                FlowChips(items: recent) { name in
+                    sides.append(DishDraft(title: name, isSide: true))
+                }
+            }
+        }
+    }
+
+    private func toggleSide(_ recipe: CDRecipe) {
+        if let i = sides.firstIndex(where: { $0.chosen == recipe }) {
+            if let saved = sides[i].side { removedSides.append(saved) }
+            sides.remove(at: i)
+        } else {
+            sides.append(DishDraft(title: recipe.title ?? "", chosen: recipe, isSide: true))
         }
     }
 
     private func load() {
         existing = MealPlan.meal(day: cell.day, slot: cell.slot, context: context)
         main = DishDraft(title: existing?.title ?? "", chosen: existing?.recipe)
-        sides = (existing?.sortedSides ?? []).map { DishDraft(title: $0.title ?? "", chosen: $0.recipe, side: $0) }
+        sides = (existing?.sortedSides ?? []).map {
+            DishDraft(title: $0.title ?? "", chosen: $0.recipe, side: $0, isSide: true)
+        }
         notes = existing?.notes ?? ""
 
         // Recent meals for this slot, most-used first, for one-tap reuse (ones without a recipe).
         let all = NSFetchRequest<CDMeal>(entityName: "CDMeal")
         all.predicate = NSPredicate(format: "slot == %@ AND recipe == nil", cell.slot.rawValue)
-        let counts = ((try? context.fetch(all)) ?? []).compactMap(\.title).filter { !$0.isEmpty }
+        recentMains = Self.mostUsed(((try? context.fetch(all)) ?? []).compactMap(\.title))
+
+        // Sides typed without a recipe (saved side recipes are on the shelf already).
+        let typedSides = NSFetchRequest<CDMealSide>(entityName: "CDMealSide")
+        typedSides.predicate = NSPredicate(format: "recipe == nil")
+        recentSides = Self.mostUsed(((try? context.fetch(typedSides)) ?? []).compactMap(\.title))
+    }
+
+    static func mostUsed(_ titles: [String]) -> [String] {
+        let counts = titles.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
             .reduce(into: [String: Int]()) { $0[$1, default: 0] += 1 }
-        recent = counts.sorted { ($1.value, $0.key) < ($0.value, $1.key) }.prefix(12).map(\.key)
+        return counts.sorted { ($1.value, $0.key) < ($0.value, $1.key) }.prefix(12).map(\.key)
     }
 
     private func save() {
         let recipe = main.resolveRecipe(persistence: persistence)
         let finalTitle = main.finalTitle(with: recipe)
-        if finalTitle.isEmpty {
+        if finalTitle.isEmpty && !sides.contains(where: { !$0.isBlank }) {
             if let existing { context.delete(existing) } // its sides go with it
         } else {
             let meal = existing ?? MealPlan.newMeal(day: cell.day, slot: cell.slot, persistence: persistence)
@@ -767,6 +895,8 @@ private struct MealEditor: View {
             meal.recipe = recipe
             recipe?.lastPlannedAt = Date()
             saveSides(on: meal)
+            context.processPendingChanges()
+            if !meal.isPlanned { context.delete(meal) } // every side turned out empty
         }
         persistence.save()
         dismiss()
@@ -795,6 +925,42 @@ private struct MealEditor: View {
             side.meal = meal
             order += 1
         }
+    }
+}
+
+/// Adds a new side (name, saved side, link or photo), or changes one already on the meal.
+private struct SideSheet: View {
+    @Bindable var side: DishDraft
+    let isNew: Bool
+    let savedRecipes: [CDRecipe]
+    let sideRecipes: [CDRecipe]
+    var onAdd: () -> Void
+
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                DishFields(dish: side, heading: nil, placeholder: "e.g. Garlic bread",
+                           savedRecipes: savedRecipes, shelf: sideRecipes, shelfTitle: "Your sides")
+            }
+            .navigationTitle(isNew ? "New side" : (side.trimmedTitle.isEmpty ? "Side" : side.trimmedTitle))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                if isNew {
+                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(isNew ? "Add" : "Done") {
+                        onAdd()
+                        dismiss()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(isNew && side.isBlank)
+                }
+            }
+        }
+        .presentationDetents([.large])
     }
 }
 

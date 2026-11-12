@@ -77,6 +77,7 @@ targets:
       - CasitaCal/Services/Persistence/Persistence.swift
       - CasitaCal/Services/Recipes/RecipeParser.swift
       - CasitaCal/Services/Recipes/RecipeImporter.swift
+      - CasitaCal/Services/Meals/MealPlan.swift
       - CasitaCal/Models/AppCalendar.swift
       - CasitaCal/Models/MealSlot.swift
     info:

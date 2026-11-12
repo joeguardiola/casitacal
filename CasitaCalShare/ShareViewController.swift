@@ -78,7 +78,7 @@ final class ShareModel {
         phase = .saving
         let saved = RecipeImporter.save(recipe, image: image, persistence: persistence)
         if plan {
-            RecipeImporter.plan(saved, day: DayKey.from(day), slot: slot.rawValue, persistence: persistence)
+            MealPlan.plan(saved, day: DayKey.from(day), slot: slot, persistence: persistence)
         }
         persistence.save()
         await persistence.waitForExport(timeout: .seconds(10))

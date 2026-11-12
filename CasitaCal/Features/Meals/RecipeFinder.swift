@@ -97,7 +97,7 @@ struct RecipeFinderSheet: View {
                     if hasDinner { confirmingReplace = true } else { planDinner() }
                 }
             }
-            if hasDinner && !done.contains(.dinner) {
+            if !done.contains(.dinner) {
                 actionButton(.side, title: "Add as a Side", doneTitle: "Added as a side", symbol: "plus", action: addSide)
             }
         }
@@ -142,9 +142,10 @@ struct RecipeFinderSheet: View {
 
     private func addSide() {
         guard let recipe = saveRecipe() else { return }
-        if MealPlan.addSide(title: recipe.title ?? dish, recipe: recipe, day: dayKey, persistence: persistence) {
-            done.insert(.side)
-        }
+        // Never planned before: file it under Sides in Recipes.
+        if (recipe.meals?.count ?? 0) == 0 && (recipe.sides?.count ?? 0) == 0 { recipe.isSide = true }
+        MealPlan.addSide(title: recipe.title ?? dish, recipe: recipe, day: dayKey, persistence: persistence)
+        done.insert(.side)
     }
 }
 

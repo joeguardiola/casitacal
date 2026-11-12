@@ -3,6 +3,14 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.6.0
+
+- Night clock waits until the lights have been off for 30 seconds (was 10), and stays away for 30 seconds after a touch in the dark; turning the lights on still wakes it right away
+- Recipes are now Mains or Sides: filter the Recipe box by All / Mains / Sides, add a recipe from just a name and a photo (no link needed), and switch any recipe between main and side
+- Planning a meal: pick a main and any number of saved sides with one tap each, or start with only sides and add the main later (saving with only sides used to delete the meal)
+- The Meals grid lists each side under the main dish ("+ Potatoes") instead of "+ 1 side"; a meal with only sides shows "No main yet" so a side never looks like the main
+- "Add to plan" on a side recipe adds it as a side instead of replacing the main dish; "Add as a Side" in Find a Recipe works even when nothing is planned yet
+
 ## 0.5.2
 
 - The header's daily card moves to its own row instead of shrinking to an icon when the top row is full (seven or more family members, or the TestFlight expiry warning)

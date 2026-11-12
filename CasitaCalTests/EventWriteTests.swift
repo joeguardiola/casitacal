@@ -101,17 +101,31 @@ struct KioskTests {
     let night = (DateComponents(hour: 22, minute: 0), DateComponents(hour: 6, minute: 30))
 
     func mode(idle: TimeInterval, at date: Date, slideshow: Int = 10, sleep: Bool = true,
-              current: KioskController.Mode = .active, dark: Bool = false) -> KioskController.Mode {
+              current: KioskController.Mode = .active, dark: Bool = false,
+              darkFor: TimeInterval = .infinity) -> KioskController.Mode {
         KioskController.mode(idle: idle, now: date, slideshowAfterMinutes: slideshow, sleepEnabled: sleep,
-                             sleepStart: night.0, sleepEnd: night.1, current: current, roomIsDark: dark, calendar: cal)
+                             sleepStart: night.0, sleepEnd: night.1, current: current, roomIsDark: dark,
+                             darkFor: darkFor, calendar: cal)
     }
 
     @Test func darkRoomShowsClockInsteadOfSlideshowDuringDay() {
         #expect(mode(idle: 5, at: at(14), dark: true) == .active)   // just touched
-        #expect(mode(idle: 10, at: at(14), dark: true) == .sleep)   // lights off: clock within ~10 s
+        #expect(mode(idle: 10, at: at(14), dark: true) == .active)  // touched 10 s ago: still awake
+        #expect(mode(idle: 30, at: at(14), dark: true) == .sleep)   // 30 s after the last touch
         #expect(mode(idle: 3 * 60, at: at(14), dark: true) == .sleep)
         #expect(mode(idle: 20 * 60, at: at(14), current: .slideshow, dark: true) == .sleep)
         // Lights back on: slideshow again
+        #expect(mode(idle: 20 * 60, at: at(14), current: .sleep, dark: false) == .slideshow)
+    }
+
+    @Test func lightsMustStayOffThirtySeconds() {
+        // Nobody has touched it in ages; the lights just went off.
+        #expect(mode(idle: 5, at: at(14), dark: true, darkFor: 3) == .active)
+        #expect(mode(idle: 60, at: at(14), dark: true, darkFor: 29) == .active)
+        #expect(mode(idle: 60, at: at(14), dark: true, darkFor: 30) == .sleep)
+        #expect(mode(idle: 20 * 60, at: at(14), current: .slideshow, dark: true, darkFor: 29) == .slideshow)
+        #expect(mode(idle: 20 * 60, at: at(14), current: .slideshow, dark: true, darkFor: 30) == .sleep)
+        // Lights back on: awake right away.
         #expect(mode(idle: 20 * 60, at: at(14), current: .sleep, dark: false) == .slideshow)
     }
 

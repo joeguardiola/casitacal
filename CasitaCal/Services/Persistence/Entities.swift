@@ -97,7 +97,7 @@ final class CDMeal: NSManagedObject {
     @NSManaged var sides: NSSet?
 }
 
-/// A side dish on a planned meal. Only the meal's own title (the main dish) shows on the calendar.
+/// A side dish on a planned meal. The calendar shows the meal's main dish, or its sides when there's no main.
 @objc(CDMealSide)
 final class CDMealSide: NSManagedObject {
     @NSManaged var id: UUID?
@@ -127,6 +127,31 @@ extension CDMeal {
             ($0.sortOrder, $0.createdAt ?? .distantPast) < ($1.sortOrder, $1.createdAt ?? .distantPast)
         }
     }
+
+    /// The main dish's name ("" when the meal is only sides).
+    var mainTitle: String { (title ?? "").trimmingCharacters(in: .whitespaces) }
+
+    var sideTitles: [String] {
+        sortedSides.compactMap { $0.title?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+    }
+
+    /// One-line name for small spots (Week, the slideshow card): the main dish, or "+ Salad, Rolls"
+    /// when only sides are planned, so a side never reads as the main.
+    var displayTitle: String? {
+        if !mainTitle.isEmpty { return mainTitle }
+        let sides = sideTitles
+        return sides.isEmpty ? nil : "+ " + sides.joined(separator: ", ")
+    }
+
+    /// Has a main dish or at least one side.
+    var isPlanned: Bool { displayTitle != nil }
+
+    /// The recipe whose photo stands for the meal: the main's, else the first side with one.
+    var photoRecipe: CDRecipe? {
+        if let recipe, recipe.imageData != nil { return recipe }
+        if !mainTitle.isEmpty { return nil }
+        return sortedSides.lazy.compactMap(\.recipe).first { $0.imageData != nil }
+    }
 }
 
 /// A saved recipe (the recipe box). Imported from a link, or just a name + photo.
@@ -151,6 +176,8 @@ final class CDRecipe: NSManagedObject {
     @NSManaged var notes: String?
     @NSManaged var createdAt: Date?
     @NSManaged var lastPlannedAt: Date?
+    /// "side" for a side dish; nil (or "main") for a main dish.
+    @NSManaged var course: String?
     @NSManaged var household: CDHousehold?
     @NSManaged var meals: NSSet?
     @NSManaged var sides: NSSet?
@@ -240,6 +267,7 @@ enum CasitaModel {
             attr("prepMinutes", .integer32AttributeType, default: 0), attr("cookMinutes", .integer32AttributeType, default: 0),
             attr("totalMinutes", .integer32AttributeType, default: 0), attr("servings", .stringAttributeType),
             attr("notes", .stringAttributeType), attr("createdAt", .dateAttributeType), attr("lastPlannedAt", .dateAttributeType),
+            attr("course", .stringAttributeType),
         ])
 
         let side = entity(CDMealSide.self, [

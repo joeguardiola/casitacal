@@ -59,7 +59,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - Tap to check off. Completed items drop to the bottom, and **Clear** removes them for everyone sharing the list.
 
 ### Meals and recipes
-- **A rolling seven-day meal plan** with today on the left and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. A meal can have sides, each with its own recipe; the calendar shows only the main dish. Show only the meals you plan.
+- **A rolling seven-day meal plan** with today on the left and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. Saved recipes are mains or sides: plan a main with any number of sides (each with its own recipe), or start from a side and add the main later. Each side is listed under the main dish on the Meals grid; until there's a main, it says "No main yet". Show only the meals you plan.
 - **Press and hold a meal to move it** to another day or slot. Drop it on a taken spot and the two swap. Hold it over a week arrow to reach another week.
 - **Paste a recipe link** and CasitaCal pulls out the photo, ingredients, steps, times and servings. It reads the schema.org recipe data most recipe sites publish, so you skip the life story and ads. Pages without recipe data still give a title and photo.
 - **Share from Safari:** on iPhone or iPad, tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
@@ -83,7 +83,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 ### Kitchen display
 - **Header:** big clock and date, plus current weather and today's high and low. Tap the weather for a 5-day forecast.
 - **Photo slideshow when idle:** after a few minutes untouched, the iPad becomes a photo frame. It shows an album you choose (ideally an iCloud Shared Album the whole family adds to), with the time, weather and next event on top.
-- **Night clock:** turns on about 10 seconds after the kitchen lights go off, using the screen brightness that Auto-Brightness picks (no setup; keep Auto-Brightness on). It can also come on at set night hours, when the screen dims to a soft clock. A touch brings the calendar back.
+- **Night clock:** turns on about 30 seconds after the kitchen lights go off, using the screen brightness that Auto-Brightness picks (no setup; keep Auto-Brightness on). It can also come on at set night hours, when the screen dims to a soft clock. A touch brings the calendar back.
 - **Walk-up wake (optional):** during the slideshow, the front camera looks for a face and wakes the display when someone walks up. Frames are checked on the iPad and never recorded or saved.
 - Waking always returns to the **calendar, showing today**.
 - **Weather** shows the town it's for (e.g. "Oak Creek, WI").

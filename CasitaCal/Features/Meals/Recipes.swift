@@ -266,6 +266,7 @@ struct RecipeView: View {
             }
             Text(recipe.title ?? "Recipe").font(.system(size: sizeClass == .compact ? 28 : 40, weight: .bold))
             HStack(spacing: 12) {
+                CourseMenu(recipe: recipe)
                 if let site = recipe.siteName { Label(site, systemImage: "globe").foregroundStyle(Palette.inkSecondary) }
                 if !recipe.timingSummary.isEmpty { Label(recipe.timingSummary, systemImage: "clock").foregroundStyle(Palette.inkSecondary) }
             }
@@ -474,9 +475,10 @@ struct AddIngredientsSheet: View {
     }
 }
 
-/// "Plan it" → pick a day in the next two weeks → pick a meal.
+/// "Plan it" → pick a day in the next two weeks → pick a meal. A side joins that meal's sides;
+/// a main replaces the main dish there.
 struct PlanMenu: View {
-    let recipe: CDRecipe
+    @ObservedObject var recipe: CDRecipe
     @Environment(Persistence.self) private var persistence
     @State private var planned: String?
 
@@ -490,15 +492,15 @@ struct PlanMenu: View {
                 Menu(label(day)) {
                     ForEach(MealSlot.allCases) { slot in
                         Button("\(slot.emoji) \(slot.label)") {
-                            RecipeImporter.plan(recipe, day: DayKey.from(day), slot: slot.rawValue, persistence: persistence)
-                            persistence.save()
+                            MealPlan.plan(recipe, day: DayKey.from(day), slot: slot, persistence: persistence)
                             planned = "\(label(day)) · \(slot.label)"
                         }
                     }
                 }
             }
         } label: {
-            Label(planned.map { "Planned: \($0)" } ?? "Add to plan", systemImage: planned == nil ? "calendar.badge.plus" : "checkmark")
+            Label(planned.map { "Planned: \($0)" } ?? (recipe.isSide ? "Add as a side" : "Add to plan"),
+                  systemImage: planned == nil ? "calendar.badge.plus" : "checkmark")
         }
     }
 
@@ -509,24 +511,67 @@ struct PlanMenu: View {
     }
 }
 
+// MARK: - Main or side
+
+/// "Main dish ⌄" / "Side dish ⌄": shows and changes what kind of dish a recipe is.
+struct CourseMenu: View {
+    @ObservedObject var recipe: CDRecipe
+    @Environment(Persistence.self) private var persistence
+
+    var body: some View {
+        Menu {
+            Picker("Kind of dish", selection: Binding(get: { recipe.isSide }, set: {
+                recipe.isSide = $0
+                persistence.save()
+            })) {
+                Label("Main dish", systemImage: "fork.knife").tag(false)
+                Label("Side dish", systemImage: "leaf").tag(true)
+            }
+        } label: {
+            HStack(spacing: 4) {
+                Text(recipe.isSide ? "Side dish" : "Main dish")
+                Image(systemName: "chevron.down").font(.caption.weight(.bold))
+            }
+            .foregroundStyle(Palette.accent)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(Palette.accent.opacity(0.12), in: Capsule())
+        }
+        .accessibilityLabel(recipe.isSide ? "Side dish. Change" : "Main dish. Change")
+    }
+}
+
 // MARK: - Recipe box
 
 struct RecipeBox: View {
+    enum Filter: String, CaseIterable, Identifiable {
+        case all = "All", mains = "Mains", sides = "Sides"
+        var id: Self { self }
+    }
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.managedObjectContext) private var context
     @Environment(Persistence.self) private var persistence
     @FetchRequest(sortDescriptors: [SortDescriptor(\CDRecipe.lastPlannedAt, order: .reverse), SortDescriptor(\CDRecipe.createdAt, order: .reverse)])
     private var recipes: FetchedResults<CDRecipe>
 
+    @AppStorage("recipes.filter") private var filter: Filter = .all
     @State private var search = ""
     @State private var open: CDRecipe?
-    @State private var isAdding = false
+    @State private var adding: AddRecipeSheet.Start?
 
     private var filtered: [CDRecipe] {
         let q = search.trimmingCharacters(in: .whitespaces)
-        guard !q.isEmpty else { return Array(recipes) }
-        return recipes.filter {
-            ($0.title ?? "").localizedCaseInsensitiveContains(q) || ($0.ingredients ?? "").localizedCaseInsensitiveContains(q)
+        return recipes.filter { r in
+            switch filter {
+            case .all: true
+            case .mains: !r.isSide
+            case .sides: r.isSide
+            }
+        }
+        .filter {
+            q.isEmpty || ($0.title ?? "").localizedCaseInsensitiveContains(q)
+                || ($0.ingredients ?? "").localizedCaseInsensitiveContains(q)
         }
     }
 
@@ -539,9 +584,33 @@ struct RecipeBox: View {
                     } description: {
                         Text("Paste a recipe link here or when planning a meal. On iPhone, tap Share → CasitaCal in Safari.")
                     } actions: {
-                        Button("Add from a link") { isAdding = true }.buttonStyle(.borderedProminent)
+                        Button("Add from a link") { adding = .init(kind: .link, isSide: false) }
+                            .buttonStyle(.borderedProminent)
+                        Button("New recipe") { adding = .init(kind: .name, isSide: false) }
                     }
                     .padding(.top, 60)
+                } else {
+                    Picker("Show", selection: $filter) {
+                        ForEach(Filter.allCases) { Text($0.rawValue).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 360)
+                    .padding(.top, 12)
+                    if filtered.isEmpty && search.isEmpty {
+                        ContentUnavailableView {
+                            Label(filter == .sides ? "No sides yet" : "No mains yet", systemImage: "book.closed")
+                        } description: {
+                            Text(filter == .sides
+                                 ? "Save salads, breads and veggies you make often, so they're one tap away when you plan a meal."
+                                 : "Save the dishes you plan meals around.")
+                        } actions: {
+                            Button(filter == .sides ? "Add a Side" : "Add a Main") {
+                                adding = .init(kind: .name, isSide: filter == .sides)
+                            }
+                            .buttonStyle(.borderedProminent)
+                        }
+                        .padding(.top, 40)
+                    }
                 }
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 220), spacing: 16)], spacing: 18) {
                     ForEach(filtered, id: \.objectID) { recipe in
@@ -549,6 +618,11 @@ struct RecipeBox: View {
                             .buttonStyle(.plain)
                             .contextMenu {
                                 PlanMenu(recipe: recipe)
+                                Button(recipe.isSide ? "Make It a Main" : "Make It a Side",
+                                       systemImage: recipe.isSide ? "fork.knife" : "leaf") {
+                                    recipe.isSide.toggle()
+                                    persistence.save()
+                                }
                                 Button("Delete recipe", systemImage: "trash", role: .destructive) {
                                     context.delete(recipe)
                                     persistence.save()
@@ -564,11 +638,20 @@ struct RecipeBox: View {
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Add from link", systemImage: "plus") { isAdding = true }
+                    Menu {
+                        Button("From a Link", systemImage: "link") {
+                            adding = .init(kind: .link, isSide: filter == .sides)
+                        }
+                        Button("New Recipe", systemImage: "square.and.pencil") {
+                            adding = .init(kind: .name, isSide: filter == .sides)
+                        }
+                    } label: {
+                        Label("Add", systemImage: "plus")
+                    }
                 }
             }
             .sheet(item: $open) { RecipeView(recipe: $0) }
-            .sheet(isPresented: $isAdding) { AddRecipeSheet() }
+            .sheet(item: $adding) { AddRecipeSheet(start: $0) }
         }
     }
 }
@@ -580,10 +663,21 @@ private struct RecipeCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            RecipePhoto(recipe: recipe)
+            RecipePhoto(recipe: recipe, placeholder: recipe.isSide ? "🥗" : "🍽️")
                 .frame(height: 150)
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .overlay(alignment: .topLeading) {
+                    if recipe.isSide {
+                        Text("Side")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(Palette.ink)
+                            .padding(.horizontal, 10)
+                            .padding(.vertical, 4)
+                            .background(.regularMaterial, in: Capsule())
+                            .padding(8)
+                    }
+                }
             Text(recipe.title ?? "").font(.headline).lineLimit(2).foregroundStyle(Palette.ink)
             Text([recipe.siteName, recipe.timingSummary.isEmpty ? nil : recipe.timingSummary].compactMap { $0 }.joined(separator: " · "))
                 .font(.caption)
@@ -596,38 +690,113 @@ private struct RecipeCard: View {
     }
 }
 
+/// Adds a recipe to the box: from a link, or just a name and a photo (for "Garlic bread").
 private struct AddRecipeSheet: View {
+    struct Start: Identifiable {
+        enum Kind { case link, name }
+        var kind: Kind
+        var isSide: Bool
+        var id: String { "\(kind)-\(isSide)" }
+    }
+
+    let start: Start
+
     @Environment(\.dismiss) private var dismiss
     @Environment(Persistence.self) private var persistence
     @State private var link = LinkImport()
+    @State private var name = ""
+    @State private var isSide = false
+    @State private var photoItem: PhotosPickerItem?
+    @State private var photoData: Data?
+    @FocusState private var nameFocused: Bool
+
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespaces) }
+    private var canSave: Bool { link.result != nil || !trimmedName.isEmpty }
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    LinkImportField(link: link)
+                    Picker("Kind of dish", selection: $isSide) {
+                        Text("Main dish").tag(false)
+                        Text("Side dish").tag(true)
+                    }
+                    .pickerStyle(.segmented)
                 }
-                if let result = link.result {
-                    Section { ParsedRecipeCard(recipe: result.recipe, image: result.image) }
+                Section {
+                    LinkImportField(link: link)
+                    if let result = link.result {
+                        ParsedRecipeCard(recipe: result.recipe, image: result.image)
+                    }
+                } header: {
+                    Text("From a link")
+                }
+                if link.result == nil {
+                    Section {
+                        TextField(isSide ? "e.g. Garlic bread" : "e.g. Grandma's enchiladas", text: $name)
+                            .font(.title3)
+                            .focused($nameFocused)
+                        PhotosPicker(selection: $photoItem, matching: .images) {
+                            if let ui = photoData.flatMap(UIImage.init(data:)) {
+                                HStack {
+                                    Image(uiImage: ui).resizable().scaledToFill().frame(width: 56, height: 56)
+                                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                                    Text("Change photo")
+                                }
+                            } else {
+                                Label("Add a photo", systemImage: "photo")
+                            }
+                        }
+                    } header: {
+                        Text("Or just a name")
+                    } footer: {
+                        Text("No recipe needed: a name (and a photo) is enough to plan it again in one tap.")
+                    }
                 }
             }
-            .navigationTitle("Add recipe")
+            .navigationTitle(isSide ? "Add a side" : "Add a recipe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        if let result = link.result {
-                            _ = RecipeImporter.save(result.recipe, image: result.image, persistence: persistence)
-                            persistence.save()
-                        }
-                        dismiss()
-                    }
-                    .fontWeight(.semibold)
-                    .disabled(link.result == nil)
+                    Button("Save", action: save)
+                        .fontWeight(.semibold)
+                        .disabled(!canSave || link.state == .loading)
+                }
+            }
+            .onAppear {
+                isSide = start.isSide
+                if start.kind == .name { nameFocused = true }
+            }
+            .onChange(of: photoItem) { _, item in
+                Task { @MainActor in
+                    guard let data = try? await item?.loadTransferable(type: Data.self) else { return }
+                    photoData = RecipeImporter.downscaledJPEG(data)
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.large])
+    }
+
+    private func save() {
+        let recipe: CDRecipe
+        if let result = link.result {
+            recipe = RecipeImporter.save(result.recipe, image: result.image, persistence: persistence)
+        } else {
+            recipe = persistence.insert(CDRecipe.self)
+            recipe.id = UUID()
+            recipe.createdAt = Date()
+            recipe.household = persistence.household()
+            recipe.title = trimmedName
+            recipe.imageData = photoData
+            if let url = RecipeImporter.firstLink(in: link.text) {
+                // The site wouldn't let us read it: keep the link with the name.
+                recipe.sourceURL = url.absoluteString
+                recipe.siteName = url.host()
+            }
+        }
+        recipe.isSide = isSide
+        persistence.save()
+        dismiss()
     }
 }

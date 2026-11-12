@@ -94,28 +94,15 @@ enum RecipeImporter {
         recipe.servings = parsed.servings
         return recipe
     }
-
-    /// Puts a recipe on the plan (replacing whatever was in that slot).
-    @MainActor
-    static func plan(_ recipe: CDRecipe, day: String, slot: String, persistence: Persistence) {
-        let context = persistence.context
-        let request = NSFetchRequest<CDMeal>(entityName: "CDMeal")
-        request.predicate = NSPredicate(format: "day == %@ AND slot == %@", day, slot)
-        let meal = (try? context.fetch(request).first) ?? {
-            let m = persistence.insert(CDMeal.self)
-            m.id = UUID()
-            m.day = day
-            m.slot = slot
-            m.household = persistence.household()
-            return m
-        }()
-        meal.title = recipe.title
-        meal.recipe = recipe
-        recipe.lastPlannedAt = Date()
-    }
 }
 
 extension CDRecipe {
+    /// A side dish (salad, rolls…) rather than a main. Plans as a side and lists under Sides.
+    var isSide: Bool {
+        get { course == "side" }
+        set { course = newValue ? "side" : nil }
+    }
+
     var ingredientLines: [String] { (ingredients ?? "").split(separator: "\n").map(String.init) }
     var stepLines: [String] { (steps ?? "").split(separator: "\n").map(String.init) }
     var image: UIImage? { imageData.flatMap(UIImage.init(data:)) }

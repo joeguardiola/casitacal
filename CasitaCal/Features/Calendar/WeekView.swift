@@ -82,14 +82,14 @@ private struct WeekDayColumn: View {
             header
             VStack(spacing: 0) {
                 eventList
-                let hasDinner = !(dinner?.title ?? "").isEmpty
+                let hasDinner = dinner?.isPlanned == true
                 if !feasts.isEmpty || hasDinner {
                     VStack(spacing: 5) {
                         ForEach(feasts) { feast in
                             FeastFooter(title: feast.title) { onSelect(feast) }
                         }
-                        if let dinner, let title = dinner.title, !title.isEmpty {
-                            DinnerFooter(title: title, recipe: dinner.recipe, onOpen: onOpenRecipe)
+                        if let dinner, let title = dinner.displayTitle {
+                            DinnerFooter(title: title, recipe: dinner.recipe ?? dinner.photoRecipe, onOpen: onOpenRecipe)
                         }
                     }
                     .padding(5)

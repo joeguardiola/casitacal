@@ -74,10 +74,6 @@ struct MealPlanTests {
         MealPlan.meal(day: day, context: persistence.context)?.sortedSides.compactMap(\.title) ?? []
     }
 
-    @Test func sidesNeedADinner() {
-        #expect(!MealPlan.addSide(title: "Salad", day: "2026-11-09", persistence: persistence))
-    }
-
     @Test func sidesAddInOrder() {
         meal("Tacos", "2026-11-09", "dinner")
         MealPlan.addSide(title: "Rice", day: "2026-11-09", persistence: persistence)
@@ -162,5 +158,79 @@ struct RecipeSearchTests {
     @Test func keepsOriginalOrderWithinAGroup() {
         let items = ["Soup A", "Soup B", "Soup C"]
         #expect(RecipeSearch.suggestions(for: "soup", in: items, title: { $0 }) == items)
+    }
+}
+
+@MainActor
+struct MealSidesTests {
+    let persistence = Persistence(inMemory: true)
+    let day = "2026-11-12"
+
+    func recipe(_ title: String, side: Bool = false) -> CDRecipe {
+        let r = persistence.insert(CDRecipe.self)
+        r.id = UUID()
+        r.title = title
+        r.isSide = side
+        return r
+    }
+
+    var dinner: CDMeal? { MealPlan.meal(day: day, context: persistence.context) }
+
+    @Test func aMealCanStartFromASide() {
+        MealPlan.addSide(title: "Salad", day: day, persistence: persistence)
+        #expect(dinner?.mainTitle == "")
+        #expect(dinner?.sideTitles == ["Salad"])
+        #expect(dinner?.displayTitle == "+ Salad") // reads as a side, not the main
+        #expect(dinner?.isPlanned == true)
+        #expect(MealPlan.dinnerTitle(day: day, context: persistence.context) == nil) // nothing to replace
+    }
+
+    @Test func aMainAddedLaterKeepsTheSides() {
+        MealPlan.addSide(title: "Salad", day: day, persistence: persistence)
+        MealPlan.plan(recipe("Lasagna"), day: day, slot: .dinner, persistence: persistence)
+        #expect(dinner?.displayTitle == "Lasagna")
+        #expect(dinner?.sideTitles == ["Salad"])
+        #expect(MealSides.summary(dinner!, short: false) == "with Salad")
+    }
+
+    @Test func planningASideRecipeNeverReplacesTheMain() {
+        MealPlan.planDinner(title: "Tacos", day: day, persistence: persistence)
+        let rice = recipe("Rice", side: true)
+        MealPlan.plan(rice, day: day, slot: .dinner, persistence: persistence)
+        MealPlan.plan(rice, day: day, slot: .dinner, persistence: persistence) // not twice
+        #expect(dinner?.mainTitle == "Tacos")
+        #expect(dinner?.sortedSides.map(\.recipe) == [rice])
+    }
+
+    @Test func sidesOnlyTitleListsThemAll() {
+        MealPlan.addSide(title: "Salad", day: day, persistence: persistence)
+        MealPlan.addSide(title: "Rolls", day: day, persistence: persistence)
+        #expect(dinner?.displayTitle == "+ Salad, Rolls")
+        #expect(MealSides.summary(dinner!, short: true) == "+ Salad, Rolls")
+        #expect(MealSides.spoken(dinner!) == "No main yet, with " + ["Salad", "Rolls"].formatted(.list(type: .and)))
+    }
+
+    @Test func photoComesFromASideOnlyWithoutAMain() {
+        let bread = recipe("Bread", side: true)
+        bread.imageData = Data([1])
+        MealPlan.plan(bread, day: day, slot: .dinner, persistence: persistence)
+        #expect(dinner?.photoRecipe == bread)
+        MealPlan.planDinner(title: "Soup", day: day, persistence: persistence)
+        #expect(dinner?.photoRecipe == nil)
+    }
+
+    @Test func existingSideOnlyRecipesGetTagged() throws {
+        let defaults = try #require(UserDefaults(suiteName: "MealSidesTests-\(UUID().uuidString)"))
+        let salad = recipe("Salad")
+        let tacos = recipe("Tacos")
+        let both = recipe("Mac and cheese")
+        MealPlan.addSide(title: "Salad", recipe: salad, day: day, persistence: persistence)
+        MealPlan.planMain(title: "Tacos", recipe: tacos, day: day, slot: .dinner, persistence: persistence)
+        MealPlan.addSide(title: "Mac", recipe: both, day: day, persistence: persistence)
+        MealPlan.planMain(title: "Mac", recipe: both, day: "2026-11-13", slot: .dinner, persistence: persistence)
+        MealPlan.tagExistingSides(persistence: persistence, defaults: defaults)
+        #expect(salad.isSide)
+        #expect(!tacos.isSide)
+        #expect(!both.isSide)
     }
 }

@@ -42,14 +42,17 @@ final class KioskController {
     /// Latest screen brightness (what Auto-Brightness chose).
     private(set) var screenBrightness: Double = 1
     private(set) var roomIsDark = false
+    /// When the room last went dark (nil while it's light).
+    private var darkSince: Date?
     /// Brightness has to rise this far above the threshold before the room counts as light again.
     /// One Auto-Brightness step: the kitchen iPad reads 0.25 dark and 0.35–0.50 with the lights on.
     nonisolated static let darkHysteresis = 0.05
 
     /// How long a touch keeps the screen awake during sleep hours with the lights on.
     nonisolated static let wakeDuringSleep: TimeInterval = 2 * 60
-    /// In a dark room the night clock comes on this soon after the last touch.
-    nonisolated static let wakeInDarkRoom: TimeInterval = 10
+    /// In a dark room the night clock comes on once the lights have been off this long, and
+    /// this long after the last touch. Lights coming back on wake it right away.
+    nonisolated static let darkRoomDelay: TimeInterval = 30
     /// How long a slideshow started by hand keeps running at night before the dark clock takes over.
     nonisolated static let manualSlideshowAtNight: TimeInterval = 30 * 60
 
@@ -108,7 +111,7 @@ final class KioskController {
         while !Task.isCancelled {
             updateRoomDarkness()
             evaluate()
-            try? await Task.sleep(for: .seconds(3)) // the dark-room clock should come on within ~10 s
+            try? await Task.sleep(for: .seconds(3)) // the dark-room clock should come on within ~30 s
         }
     }
 
@@ -131,7 +134,8 @@ final class KioskController {
         let target = Self.mode(
             idle: idle, now: now, slideshowAfterMinutes: slideshowAfterMinutes,
             sleepEnabled: sleepEnabled, sleepStart: sleepStart, sleepEnd: sleepEnd,
-            current: mode, roomIsDark: darkRoomEnabled && roomIsDark, manualSlideshow: isManualSlideshow
+            current: mode, roomIsDark: darkRoomEnabled && roomIsDark,
+            darkFor: darkSince.map { now.timeIntervalSince($0) } ?? 0, manualSlideshow: isManualSlideshow
         )
         if target != mode { mode = target }
         // Dim only for scheduled sleep; in a dark room Auto-Brightness already has it low.
@@ -145,6 +149,7 @@ final class KioskController {
         guard !isDimmed, let screen else { return }
         screenBrightness = Double(screen.brightness)
         roomIsDark = Self.isDark(brightness: screenBrightness, threshold: Self.darkThreshold, wasDark: roomIsDark)
+        if !roomIsDark { darkSince = nil } else if darkSince == nil { darkSince = Date() }
     }
 
     nonisolated static func isDark(brightness: Double, threshold: Double, wasDark: Bool) -> Bool {
@@ -155,15 +160,17 @@ final class KioskController {
     nonisolated static func mode(
         idle: TimeInterval, now: Date, slideshowAfterMinutes: Int, sleepEnabled: Bool,
         sleepStart: DateComponents, sleepEnd: DateComponents, current: Mode, roomIsDark: Bool = false,
-        manualSlideshow: Bool = false, calendar: Calendar = .current
+        darkFor: TimeInterval = .infinity, manualSlideshow: Bool = false, calendar: Calendar = .current
     ) -> Mode {
         let scheduled = sleepEnabled && isWithin(now, start: sleepStart, end: sleepEnd, calendar: calendar)
-        let isNight = scheduled || roomIsDark
+        // Dark only once the lights have stayed off a while, so a quick flick of the switch does nothing.
+        let isDark = roomIsDark && darkFor >= darkRoomDelay
+        let isNight = scheduled || isDark
         if manualSlideshow && current == .slideshow && (!isNight || idle < manualSlideshowAtNight) {
             return .slideshow
         }
         if isNight {
-            return idle >= (roomIsDark ? wakeInDarkRoom : wakeDuringSleep) ? .sleep : .active
+            return idle >= (isDark ? darkRoomDelay : wakeDuringSleep) ? .sleep : .active
         }
         if current == .slideshow { return .slideshow } // started manually or by idle; a touch ends it
         if slideshowAfterMinutes > 0 && idle >= TimeInterval(slideshowAfterMinutes * 60) { return .slideshow }

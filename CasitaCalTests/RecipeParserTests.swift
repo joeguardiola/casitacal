@@ -91,7 +91,7 @@ struct RecipeParserTests {
         let p = Persistence(inMemory: true)
         let parsed = ParsedRecipe(title: "Tacos", sourceURL: url)
         let a = RecipeImporter.save(parsed, image: nil, persistence: p)
-        RecipeImporter.plan(a, day: "2026-11-09", slot: "dinner", persistence: p)
+        MealPlan.plan(a, day: "2026-11-09", slot: .dinner, persistence: p)
         var again = parsed
         again.title = "Better Tacos"
         let b = RecipeImporter.save(again, image: nil, persistence: p)
