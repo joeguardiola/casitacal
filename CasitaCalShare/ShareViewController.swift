@@ -65,7 +65,7 @@ final class ShareModel {
         guard let recipe else { return }
         // The app moves its database into the shared folder on first launch after updating;
         // until then, don't create a second (empty) one here.
-        let store = Persistence.storeDirectory().appendingPathComponent("Household.sqlite")
+        let store = Persistence.storeDirectory().appendingPathComponent("\(Persistence.storeName).sqlite")
         guard FileManager.default.fileExists(atPath: store.path) else {
             phase = .failed("Open CasitaCal once first, then try sharing again.")
             return

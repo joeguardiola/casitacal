@@ -19,6 +19,22 @@ struct MemberStoreTests {
         #expect(store().members.count == MemberStore.starterFamily.count)
     }
 
+    @Test func strayHouseholdDoesNotDuplicatePeople() {
+        let p = Persistence(inMemory: true)
+        let real = p.createHousehold()
+        real.createdAt = Date(timeIntervalSince1970: 0) // the household in use (oldest)
+        let stray = p.createHousehold(name: "Leftover test household")
+        for (name, household) in [("Lauren", real), ("Lauren", stray), ("Jonah", stray)] {
+            let row = p.insert(CDMember.self)
+            row.id = UUID()
+            row.name = name
+            row.colorId = MemberColor.allCases.first?.googleColorId
+            row.household = household
+        }
+        p.save()
+        #expect(store(p).members.map(\.name) == ["Lauren"])
+    }
+
     @Test func persistsInDatabase() {
         let p = Persistence(inMemory: true)
         let s = store(p)

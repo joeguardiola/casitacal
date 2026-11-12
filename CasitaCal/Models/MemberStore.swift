@@ -87,6 +87,10 @@ final class MemberStore {
         let request = NSFetchRequest<CDMember>(entityName: "CDMember")
         request.sortDescriptors = [NSSortDescriptor(key: "sortOrder", ascending: true),
                                    NSSortDescriptor(key: "name", ascending: true)]
+        // Only the household in use: a stray second household must not show up as duplicate people.
+        if let household = persistence.activeHousehold {
+            request.predicate = NSPredicate(format: "household == %@ OR household == nil", household)
+        }
         let rows = (try? persistence.context.fetch(request)) ?? []
         // CloudKit can briefly deliver duplicates of the same member; show each id once.
         var seen = Set<UUID>()

@@ -21,6 +21,14 @@ final class Persistence {
     /// Shared folder so the Share extension can save into the same database (paid team only).
     static let appGroupID = "group.com.guardiola.casitacal"
     static var isExtension: Bool { Bundle.main.bundleURL.pathExtension == "appex" }
+    /// The database's file name. Debug builds sync with CloudKit's *Development* environment, so
+    /// they keep their own file: running one on the kitchen iPad must never mix test data into the
+    /// real household (it once did, giving the iPad a second "Our casita" with duplicate members).
+    #if DEBUG
+    static let storeName = "HouseholdDebug"
+    #else
+    static let storeName = "Household"
+    #endif
     static let shared = Persistence()
 
     @ObservationIgnored let container: NSPersistentCloudKitContainer
@@ -75,10 +83,10 @@ final class Persistence {
             return d
         }
 
-        let privateURL = inMemory ? URL(fileURLWithPath: "/dev/null") : dir.appendingPathComponent("Household.sqlite")
+        let privateURL = inMemory ? URL(fileURLWithPath: "/dev/null") : dir.appendingPathComponent("\(Self.storeName).sqlite")
         var descriptions = [describe(privateURL, scope: usesCloudKit ? .private : nil)]
         if usesCloudKit {
-            descriptions.append(describe(dir.appendingPathComponent("Household-shared.sqlite"), scope: .shared))
+            descriptions.append(describe(dir.appendingPathComponent("\(Self.storeName)-shared.sqlite"), scope: .shared))
         }
         container.persistentStoreDescriptions = descriptions
 
@@ -88,7 +96,7 @@ final class Persistence {
         let coordinator = container.persistentStoreCoordinator
         privateStore = coordinator.persistentStore(for: privateURL) ?? coordinator.persistentStores.first
         if usesCloudKit {
-            sharedStore = coordinator.persistentStore(for: dir.appendingPathComponent("Household-shared.sqlite"))
+            sharedStore = coordinator.persistentStore(for: dir.appendingPathComponent("\(Self.storeName)-shared.sqlite"))
         }
 
         context.automaticallyMergesChangesFromParent = true

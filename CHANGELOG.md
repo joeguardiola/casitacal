@@ -7,6 +7,7 @@ The version shows in the app under **Settings → About**.
 
 - Meals: a meal typed as a list ("Chicken soup, crackers and blackberries") shows as the main dish with its sides, and the editor shows how it will be planned as you type; single dishes like "Mac and cheese" stay whole
 - Meals: like Week on the Calendar, today's column is wider; tap a meal to widen its day so it's easy to read (tap again to open it), or tap a date to widen or even out the days
+- Family members show once even if a leftover second household ends up on a device (the kitchen iPad showed two Laurens and two Jonahs)
 
 ## 0.6.0
 
