@@ -43,7 +43,7 @@ private struct DinnerLookup: View {
                 Text(MealSlot.dinner.emoji).font(.system(size: 44))
             }
             VStack(alignment: .leading, spacing: 2) {
-                Text(meal.mainTitle.isEmpty ? "\(label)'s sides" : "\(label)'s dinner").font(.headline).opacity(0.85)
+                Text(meal.plate.main.isEmpty ? "\(label)'s sides" : "\(label)'s dinner").font(.headline).opacity(0.85)
                 Text(title).font(.title2.weight(.bold)).lineLimit(2)
             }
         }

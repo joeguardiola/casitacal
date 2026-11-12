@@ -3,6 +3,11 @@
 Each TestFlight upload gets a version (tagged `vX.Y.Z` in git) and a build number (the upload time).
 The version shows in the app under **Settings → About**.
 
+## 0.6.1
+
+- Meals: a meal typed as a list ("Chicken soup, crackers and blackberries") shows as the main dish with its sides, and the editor shows how it will be planned as you type; single dishes like "Mac and cheese" stay whole
+- Meals: like Week on the Calendar, today's column is wider; tap a meal to widen its day so it's easy to read (tap again to open it), or tap a date to widen or even out the days
+
 ## 0.6.0
 
 - Night clock waits until the lights have been off for 30 seconds (was 10), and stays away for 30 seconds after a touch in the dark; turning the lights on still wakes it right away

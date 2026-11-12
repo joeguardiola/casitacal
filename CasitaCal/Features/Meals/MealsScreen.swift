@@ -178,6 +178,11 @@ private struct MealGrid: View {
     var onMove: (String, MealsScreen.MealCell) -> Bool
 
     @FetchRequest private var meals: FetchedResults<CDMeal>
+    /// Which day is wider, like Week on the Calendar: today to start, or the day last tapped.
+    @State private var widthChoice: WeekColumns.Choice = .automatic
+
+    private static let labelWidth: CGFloat = 84
+    private static let spacing: CGFloat = 10
 
     init(days: [Date], slots: [MealSlot], onOpen: @escaping (MealsScreen.MealCell, CDMeal?) -> Void,
          onMove: @escaping (String, MealsScreen.MealCell) -> Bool) {
@@ -192,32 +197,48 @@ private struct MealGrid: View {
         let byCell = Dictionary(meals.map { ("\($0.day ?? "")-\($0.slot ?? "")", $0) }, uniquingKeysWith: { a, _ in a })
         // Explicit day widths keep all seven days on screen when the iPad is in portrait.
         GeometryReader { geo in
-            grid(byCell: byCell, dayWidth: dayWidth(total: geo.size.width))
+            let widened = WeekColumns.widenedIndex(widthChoice, days: days)
+            let widths = WeekColumns.widths(total: max(geo.size.width - Self.labelWidth - Self.spacing, 0),
+                                            spacing: Self.spacing, count: days.count, widened: widened)
+            grid(byCell: byCell, widths: widths, widened: widened)
                 .frame(width: geo.size.width, height: geo.size.height, alignment: .top)
         }
     }
 
-    private func dayWidth(total: CGFloat) -> CGFloat {
-        let count = CGFloat(max(days.count, 1))
-        let gaps: CGFloat = 10 * count
-        return max((total - 84 - gaps) / count, 0)
+    private func toggleWidth(_ index: Int) {
+        withAnimation(.snappy) { widthChoice = WeekColumns.toggled(widthChoice, tapped: index, days: days) }
     }
 
-    private func grid(byCell: [String: CDMeal], dayWidth: CGFloat) -> some View {
-        Grid(horizontalSpacing: 10, verticalSpacing: 10) {
+    /// A planned meal in a narrow day widens that day so it can be read; in the wide day it opens.
+    /// Empty spots open the editor straight away.
+    private func tap(_ meal: CDMeal?, at index: Int, cell: MealsScreen.MealCell, widened: Int?) {
+        if meal?.isPlanned == true && index != widened {
+            withAnimation(.snappy) { widthChoice = .day(days[index]) }
+        } else {
+            onOpen(cell, meal)
+        }
+    }
+
+    private func grid(byCell: [String: CDMeal], widths: [CGFloat], widened: Int?) -> some View {
+        Grid(horizontalSpacing: Self.spacing, verticalSpacing: 10) {
             GridRow {
-                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]).frame(width: 84, height: 1)
-                ForEach(days, id: \.self) { day in
+                Color.clear.gridCellUnsizedAxes([.horizontal, .vertical]).frame(width: Self.labelWidth, height: 1)
+                ForEach(Array(days.enumerated()), id: \.element) { index, day in
                     let isToday = Calendar.app.isDateInToday(day)
-                    VStack(spacing: 2) {
-                        Text(day, format: .dateTime.weekday(.abbreviated))
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(isToday ? Palette.accent : Palette.inkSecondary)
-                        Text(day, format: .dateTime.day())
-                            .font(.title2.weight(.bold))
-                            .foregroundStyle(isToday ? Palette.accent : Palette.ink)
+                    Button { toggleWidth(index) } label: {
+                        VStack(spacing: 2) {
+                            Text(day, format: .dateTime.weekday(index == widened ? .wide : .abbreviated))
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(isToday ? Palette.accent : Palette.inkSecondary)
+                            Text(day, format: .dateTime.day())
+                                .font(.title2.weight(.bold))
+                                .foregroundStyle(isToday ? Palette.accent : Palette.ink)
+                        }
+                        .frame(width: widths[index])
+                        .contentShape(Rectangle())
                     }
-                    .frame(width: dayWidth)
+                    .buttonStyle(.plain)
+                    .accessibilityHint(index == widened ? "Makes the days even" : "Widens this day")
                 }
             }
             ForEach(slots) { slot in
@@ -228,16 +249,16 @@ private struct MealGrid: View {
                         Text(slot.emoji).font(.system(size: isBig ? 30 : 22))
                         Text(slot.label).font(.subheadline.weight(.semibold)).foregroundStyle(Palette.inkSecondary)
                     }
-                    .frame(width: 84)
-                    ForEach(days, id: \.self) { day in
+                    .frame(width: Self.labelWidth)
+                    ForEach(Array(days.enumerated()), id: \.element) { index, day in
                         let key = DayKey.from(day)
                         let meal = byCell["\(key)-\(slot.rawValue)"]
-                        Button { onOpen(.init(day: key, slot: slot), meal) } label: {
+                        Button { tap(meal, at: index, cell: .init(day: key, slot: slot), widened: widened) } label: {
                             MealTile(meal: meal, isBig: isBig, isToday: Calendar.app.isDateInToday(day))
                         }
                         .buttonStyle(.plain)
                         .draggableMeal(meal)
-                        .frame(width: dayWidth)
+                        .frame(width: widths[index])
                         .modifier(MealDropTarget(cornerRadius: 16) { onMove($0, .init(day: key, slot: slot)) })
                         .accessibilityLabel("\(slot.label), \(day.formatted(.dateTime.weekday(.wide))): \(meal.map(MealSides.spoken) ?? "empty")")
                     }
@@ -260,8 +281,9 @@ private struct MealTile: View {
 
     /// Plain values rather than the meal, so the tile redraws when its sides change.
     init(meal: CDMeal?, isBig: Bool, isToday: Bool) {
-        main = meal.flatMap { $0.mainTitle.isEmpty ? nil : $0.mainTitle }
-        sides = meal?.sideTitles ?? []
+        let plate = meal?.plate
+        main = plate.flatMap { $0.main.isEmpty ? nil : $0.main }
+        sides = plate?.sides ?? []
         photoRecipe = meal?.photoRecipe
         self.isBig = isBig
         self.isToday = isToday
@@ -302,8 +324,9 @@ private struct MealTile: View {
                             .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
                         VStack(alignment: .leading, spacing: 1) {
                             mainText(.subheadline.weight(.semibold), color: Palette.ink, lineLimit: 2)
+                                .layoutPriority(1)
                             if let sidesLine {
-                                Text(sidesLine).font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                                Text(sidesLine).font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary).lineLimit(2)
                             }
                         }
                         Spacer(minLength: 0)
@@ -314,10 +337,11 @@ private struct MealTile: View {
                     VStack(spacing: isBig ? 6 : 2) {
                         mainText(isBig ? .headline : .subheadline.weight(.semibold), color: Palette.ink, lineLimit: isBig ? 4 : 2)
                             .minimumScaleFactor(0.8)
+                            .layoutPriority(1)
                         if isBig {
                             SideLines(sides: sides, color: Palette.inkSecondary, alignment: .center)
                         } else if let sidesLine {
-                            Text(sidesLine).font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary).lineLimit(1)
+                            Text(sidesLine).font(.caption2.weight(.medium)).foregroundStyle(Palette.inkSecondary).lineLimit(2)
                         }
                     }
                     .multilineTextAlignment(.center)
@@ -399,7 +423,7 @@ private struct MealList: View {
                                     Text(slot.emoji)
                                     Text(slot.label).foregroundStyle(Palette.inkSecondary).frame(width: 80, alignment: .leading)
                                     VStack(alignment: .leading, spacing: 1) {
-                                        if let meal, meal.mainTitle.isEmpty, meal.isPlanned {
+                                        if let meal, meal.plate.main.isEmpty, meal.isPlanned {
                                             Text("No main yet").italic().foregroundStyle(Palette.inkSecondary).lineLimit(1)
                                         } else {
                                             Text(meal?.displayTitle ?? "—").foregroundStyle(Palette.ink).lineLimit(1)
@@ -437,7 +461,7 @@ private struct MealList: View {
 enum MealSides {
     /// "with Salad and Rolls", or "+ Salad, Rolls" where there's little room. Nil with no sides.
     static func summary(_ meal: CDMeal, short: Bool) -> String? {
-        let titles = meal.sideTitles
+        let titles = meal.plate.sides
         guard !titles.isEmpty else { return nil }
         if short { return "+ " + titles.joined(separator: ", ") }
         return "with " + titles.formatted(.list(type: .and))
@@ -445,7 +469,8 @@ enum MealSides {
 
     /// For VoiceOver: "Tacos, with Rice and Beans", or "No main yet, with Salad".
     static func spoken(_ meal: CDMeal) -> String {
-        [meal.mainTitle.isEmpty ? "No main yet" : meal.mainTitle, summary(meal, short: false)]
+        let main = meal.plate.main
+        return [main.isEmpty ? "No main yet" : main, summary(meal, short: false)]
             .compactMap { $0 }.joined(separator: ", ")
     }
 }
@@ -610,8 +635,16 @@ private struct DishFields: View {
     /// The row of saved recipes to pick from: mains for the main dish, sides for a side.
     var shelf: [CDRecipe]
     var shelfTitle: String
+    /// Main dish only: shows how a typed list will be planned ("Soup, with crackers as a side").
+    var previewsSplit = false
 
     @State private var photoItem: PhotosPickerItem?
+
+    /// A typed list ("Soup, crackers and fruit") read as a main plus sides, live as you type.
+    private var splitPreview: (main: String, sides: [String])? {
+        guard previewsSplit, dish.chosen == nil, dish.link.result == nil else { return nil }
+        return DishList.split(dish.title)
+    }
     @FocusState private var titleFocused: Bool
 
     /// Saved recipes matching what's being typed. Tapping one attaches it; typing alone never does.
@@ -634,7 +667,18 @@ private struct DishFields: View {
             }
         } header: {
             if let heading { Text(heading) }
+        } footer: {
+            if let split = splitPreview {
+                Label {
+                    Text("Plans as **\(split.main)**, with \(split.sides.formatted(.list(type: .and))) as \(split.sides.count == 1 ? "a side" : "sides").")
+                } icon: {
+                    Image(systemName: "wand.and.stars")
+                }
+                .font(.footnote)
+                .foregroundStyle(Palette.accent)
+            }
         }
+        .animation(.snappy, value: splitPreview?.main)
         .onChange(of: dish.link.result?.recipe) { _, new in
             if let new, dish.trimmedTitle.isEmpty { dish.title = new.title }
         }
@@ -757,8 +801,8 @@ private struct MealEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                DishFields(dish: main, heading: "Main dish", placeholder: "e.g. Tacos",
-                           savedRecipes: Array(savedRecipes), shelf: mains, shelfTitle: "Your mains")
+                DishFields(dish: main, heading: "Main dish", placeholder: "e.g. Tacos, or soup, crackers and fruit",
+                           savedRecipes: Array(savedRecipes), shelf: mains, shelfTitle: "Your mains", previewsSplit: true)
                 if !recentMains.isEmpty && main.chosen == nil {
                     Section("Recent") {
                         FlowChips(items: recentMains) { main.title = $0 }
@@ -864,6 +908,12 @@ private struct MealEditor: View {
         sides = (existing?.sortedSides ?? []).map {
             DishDraft(title: $0.title ?? "", chosen: $0.recipe, side: $0, isSide: true)
         }
+        // A typed main that's really a list ("Soup, crackers and fruit") opens as a main plus
+        // sides; Save keeps it that way, Cancel leaves it as it was.
+        if existing?.recipe == nil, let parts = DishList.split(main.title) {
+            main.title = parts.main
+            sides = parts.sides.map { DishDraft(title: $0, isSide: true) } + sides
+        }
         notes = existing?.notes ?? ""
 
         // Recent meals for this slot, most-used first, for one-tap reuse (ones without a recipe).
@@ -884,6 +934,12 @@ private struct MealEditor: View {
     }
 
     private func save() {
+        // Typed "Soup, crackers and fruit" (no recipe): plan it as Soup with two sides.
+        if main.chosen == nil, main.link.result == nil, main.photoData == nil, main.link.text.isEmpty,
+           let parts = DishList.split(main.title) {
+            main.title = parts.main
+            sides = parts.sides.map { DishDraft(title: $0, isSide: true) } + sides
+        }
         let recipe = main.resolveRecipe(persistence: persistence)
         let finalTitle = main.finalTitle(with: recipe)
         if finalTitle.isEmpty && !sides.contains(where: { !$0.isBlank }) {

@@ -134,24 +134,6 @@ extension CDMeal {
     var sideTitles: [String] {
         sortedSides.compactMap { $0.title?.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
     }
-
-    /// One-line name for small spots (Week, the slideshow card): the main dish, or "+ Salad, Rolls"
-    /// when only sides are planned, so a side never reads as the main.
-    var displayTitle: String? {
-        if !mainTitle.isEmpty { return mainTitle }
-        let sides = sideTitles
-        return sides.isEmpty ? nil : "+ " + sides.joined(separator: ", ")
-    }
-
-    /// Has a main dish or at least one side.
-    var isPlanned: Bool { displayTitle != nil }
-
-    /// The recipe whose photo stands for the meal: the main's, else the first side with one.
-    var photoRecipe: CDRecipe? {
-        if let recipe, recipe.imageData != nil { return recipe }
-        if !mainTitle.isEmpty { return nil }
-        return sortedSides.lazy.compactMap(\.recipe).first { $0.imageData != nil }
-    }
 }
 
 /// A saved recipe (the recipe box). Imported from a link, or just a name + photo.

@@ -234,3 +234,55 @@ struct MealSidesTests {
         #expect(!both.isSide)
     }
 }
+
+struct DishListTests {
+    func split(_ s: String) -> [String]? {
+        DishList.split(s).map { [$0.main] + $0.sides }
+    }
+
+    @Test func saturdaysLunch() {
+        #expect(split("Chicken soup, slice of Colby jack, blackberries and 2 saltines")
+                == ["Chicken soup", "Slice of Colby jack", "Blackberries", "2 saltines"])
+    }
+
+    @Test func oneDishStaysWhole() {
+        #expect(split("Mac and cheese") == nil)
+        #expect(split("Rice and beans") == nil)
+        #expect(split("Chicken & dumplings") == nil)
+        #expect(split("Salmon Piccata (Ready in 20 Minutes)") == nil)
+        #expect(split("Leftovers") == nil)
+    }
+
+    @Test func withStartsTheSides() {
+        #expect(split("Steak with salad, rolls") == ["Steak", "Salad", "Rolls"])
+        #expect(split("Pork chops with mac and cheese") == ["Pork chops", "Mac and cheese"])
+        #expect(split("Tacos with rice, beans and guacamole") == ["Tacos", "Rice", "Beans", "Guacamole"])
+    }
+
+    @Test func otherSeparators() {
+        #expect(split("Burgers + fries") == ["Burgers", "Fries"])
+        #expect(split("Mac and cheese, peas") == ["Mac and cheese", "Peas"])
+        #expect(split("Chili; cornbread") == ["Chili", "Cornbread"])
+    }
+
+    @Test func parenthesesStayTogether() {
+        #expect(split("Curry (mild, with rice)") == nil)
+        #expect(split("Curry (mild, spicy), naan") == ["Curry (mild, spicy)", "Naan"])
+    }
+
+    @Test @MainActor func typedListShowsAsMainAndSides() {
+        let p = Persistence(inMemory: true)
+        let m = p.insert(CDMeal.self)
+        m.id = UUID()
+        m.title = "Soup, crackers and fruit"
+        #expect(m.plate.main == "Soup")
+        #expect(m.plate.sides == ["Crackers", "Fruit"])
+        #expect(m.displayTitle == "Soup")
+        // A saved recipe's name is never split.
+        let r = p.insert(CDRecipe.self)
+        r.id = UUID()
+        r.title = "Soup, crackers and fruit"
+        m.recipe = r
+        #expect(m.plate.main == "Soup, crackers and fruit")
+    }
+}
