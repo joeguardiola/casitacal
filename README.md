@@ -18,7 +18,7 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - [Setup from scratch](#setup-from-scratch)
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
+- [Status](#status)
 
 ---
 
@@ -59,15 +59,16 @@ CasitaCal turns an iPad into a wall/counter display that shows what the family i
 - Tap to check off. Completed items drop to the bottom, and **Clear** removes them for everyone sharing the list.
 
 ### Meals and recipes
-- **A rolling seven-day meal plan** with today on the left and breakfast, lunch, dinner and snacks down. Dinner gets big photo tiles. Saved recipes are mains or sides: plan a main with any number of sides (each with its own recipe), or start from a side and add the main later. Each side is listed under the main dish on the Meals grid; until there's a main, it says "No main yet". Show only the meals you plan.
-- **Press and hold a meal to move it** to another day or slot. Drop it on a taken spot and the two swap. Hold it over a week arrow to reach another week.
-- **Paste a recipe link** and CasitaCal pulls out the photo, ingredients, steps, times and servings. It reads the schema.org recipe data most recipe sites publish, so you skip the life story and ads. Pages without recipe data still give a title and photo.
-- **Share from Safari:** on iPhone or iPad, tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
-- **Recipe box:** every recipe you add is saved, searchable by name or ingredient, and one tap to plan again.
-- **Cooking view:** big text, ingredients you can tick off, numbered steps you tap to keep your place, and your own notes ("double the garlic").
-- **Add to list…** (in a recipe's Ingredients) opens a checklist of tidied-up ingredients ("Ground beef (1 ½ pounds)") to send to a Reminders list. Nothing starts ticked, so you pick exactly what you need, and things that already look like they're on the list are flagged. Nothing is ever added automatically.
-- **Tonight's dinner** shows at the bottom of today on the Week view and on the slideshow, with its photo (after 8 PM the slideshow shows tomorrow's). Tap it on Week to open the recipe.
-- Meals without a link can have a photo from your library, or just a name. **Recent** suggestions make repeat meals one tap, and typing a name offers matching saved recipes.
+- **A rolling seven-day meal plan:** today on the left, breakfast, lunch, dinner and snacks down, with big photo tiles for dinner. Like Week on the Calendar, today's column is wider; tap a meal to widen its day, tap again to open it.
+- **A main and its sides:** pick a main and tap saved sides on and off. Each side is listed under the main ("+ Potatoes"); a meal can start with just a side ("No main yet"). Typing a list like *"Chicken soup, crackers and blackberries"* is planned as Chicken soup with two sides, while a single dish like *"Mac and cheese"* stays whole.
+- **Recipe box,** filtered by All / Mains / Sides and searchable by name or ingredient:
+  - **Paste a recipe link** and CasitaCal pulls out the photo, ingredients, steps, times and servings from the schema.org data most recipe sites publish, so you skip the life story and ads.
+  - **Share from Safari:** tap Share → **CasitaCal**, pick a day and meal, and it lands on the kitchen iPad.
+  - Or save just a name and a photo, for dishes like "Garlic bread".
+- **Cooking view:** big text, ingredients you tick off, numbered steps you tap to keep your place, and your own notes ("double the garlic").
+- **Add to list…** sends the ingredients you pick to a Reminders list. Nothing starts ticked, items that already look like they're on the list are flagged, and nothing is ever added automatically.
+- **Moving meals:** press and hold a meal to drag it to another day or slot (a taken spot swaps). Hold it over a week arrow to reach another week.
+- **Tonight's dinner** shows at the bottom of today on Week and on the slideshow (after 8 PM, tomorrow's).
 
 ### Daily info
 - **Optional topics next to the weather,** all off until chosen in Settings: Catholic feast days, coming-up events, national days, today in history, and a thought for the day. Tap for details.
@@ -199,10 +200,11 @@ Or just put their name in the title: *"Emma piano"*.
   - Tap **⋯** to rename or delete the list.
   - Tap **New list** for more lists.
 - **Meals:**
-  - Tap any square to plan that meal. Pick from **Recent** to reuse one.
+  - Tap an empty square to plan that meal: type it, pick from **Your mains**, or paste a link. Add sides from **Your sides** or **New side…**.
+  - Tap a planned meal to widen its day, then again to open the recipe or editor.
   - Use **Meals shown** to hide breakfast or lunch, or show snacks.
 
-> Chores, lists and meals are stored on the iPad for now. Once the paid Apple team is set up, they sync through iCloud, and a later milestone shares them with a second Apple ID.
+Chores, meals, recipes and family sync through iCloud to every device in the household. Lists live in Apple Reminders.
 
 ### Settings
 - **Family:**
@@ -312,7 +314,7 @@ WeatherKit only works for apps signed by a paid team. Free-team builds show `--�
 2. **CloudKit schema → production** (only when the data model changes, and before the first upload):
    1. Run a debug build on a device with `-cloudKitSchemaSetup YES` (`xcrun devicectl device process launch … com.guardiola.casitacal -- -cloudKitSchemaSetup YES`). It registers every record type **and the `cloudkit.share` type that family invites need**, using throwaway data.
    2. [CloudKit Console](https://icloud.developer.apple.com) → Development → **Deploy Schema Changes**.
-   3. That debug install replaces TestFlight on the device: reinstall from TestFlight afterwards (data is kept).
+   3. That debug install replaces TestFlight on the device: reinstall from TestFlight afterwards. Debug builds use iCloud's Development environment and their own database file, so they never touch the family's data.
 3. **Upload:** `scripts/testflight.sh` (patch bump), `minor` or `major`. It needs a clean git tree, bumps the version, uploads, commits, tags `vX.Y.Z` and pushes. Add a `## X.Y.Z` section to `CHANGELOG.md` first.
 4. **Invite family to the household:** on the iPad, Settings → Family sharing → **Invite family…** → Messages.
 5. **Never expire:** TestFlight builds stop opening after 90 days.
@@ -341,19 +343,22 @@ CasitaCal/
   App/                       app entry, root layout (iPad rail / iPhone tabs)
   DesignSystem/              palette, avatars, cards
   Models/                    Member and MemberStore, CalendarEvent, EventDraft, AppCalendar (week start)
-  Services/Persistence/      Core Data household store (schema in code, CloudKit-ready)
-  Features/Chores|Lists|Meals/  chore chart and editor, shared lists, weekly meal plan
-  Services/Google/           sign-in, Calendar REST client, DTOs, EventMapper (who's it for)
-  Features/Calendar/         EventStore (sync and cache), layout math, Week/Month/Schedule, sheets
-  Features/Header/           clock, weather badge and forecast, avatar filter bar
-  Features/Kiosk/            slideshow and night-clock overlays
-  Features/Photos/           album picker and preview
-  Services/Weather/          WeatherKit and one-shot location
-  Services/Photos/           PhotoKit album access
-  Services/Kiosk/            idle and night logic, touch watcher, screen dimming
-  Features/Settings/         family, Google and calendar settings
+  Features/
+    Calendar/                EventStore (sync and cache), layout math, Week/Month/Schedule, sheets
+    Header/                  clock, weather, daily info, avatar filter bar
+    Chores/ Lists/ Meals/    chore chart, Reminders lists, meal plan, recipe box and cooking view
+    Kiosk/ Photos/           slideshow and night-clock overlays, album picker
+    Settings/                family, calendar, daily info, kitchen display, household sharing
+  Services/
+    Persistence/             Core Data + CloudKit household store (schema in code)
+    Google/                  sign-in, Calendar REST client, EventMapper (who's it for)
+    Meals/ Recipes/          meal plan logic, typed-list splitting, recipe import and parsing
+    Reminders/ Daily/        EventKit lists, feast days and other daily info
+    Kiosk/ Weather/ Photos/  idle and night logic, WeatherKit, PhotoKit
+CasitaCalShare/              Share extension (Safari → CasitaCal)
 CasitaCalTests/              Swift Testing unit tests
-docs/                        GitHub Pages: home page and privacy policy
+docs/                        GitHub Pages: home page, privacy policy, daily events
+scripts/                     TestFlight upload and keep-alive
 .githooks/pre-commit         blocks commits containing credentials
 ```
 
@@ -362,13 +367,7 @@ docs/                        GitHub Pages: home page and privacy policy
 xcodebuild test -scheme CasitaCal -destination 'platform=iOS Simulator,name=iPad Pro 13-inch (M5)'
 ```
 
-The tests cover:
-- event layout: overlaps, overnight events, all-day ranges, DST, month grid, Monday weeks
-- Google parsing and request bodies
-- "who's it for" mapping
-- series retiming
-- cache merging
-- member storage
+The tests cover calendar layout (overlaps, all-day, DST, month grid), Google parsing and "who's it for", chores, Reminders, the meal plan (sides, moving, typed lists), recipe parsing, shopping items, daily info and feast days, the night clock, and household storage.
 
 ### Secrets policy
 This repo is **public**. Never commit credentials or personal IDs.
@@ -402,19 +401,9 @@ This repo is **public**. Never commit credentials or personal IDs.
 
 ---
 
-## Roadmap
+## Status
 
-| Milestone | Status |
-|---|---|
-| 1. App shell, design system, family profiles | ✅ Done |
-| 2. Google sign-in, Day/Week/Month/Schedule views, "who's it for" | ✅ Done |
-| 3. Add, edit and delete events, quick add, repeats, offline cache | ✅ Done |
-| 4. Kiosk: weather (WeatherKit), night mode, idle photo slideshow (iCloud Shared Album) | ✅ Done (weather needs the paid team) |
-| 5. Chores, lists and meals | ✅ Done |
-| 6. iCloud sync, sharing across Apple IDs, iPhone companion layout | ✅ Done (sync verified iPad ↔ iPhone) |
-| 7. Reminders-backed lists, recipe import + Share from Safari, dark-room night clock, walk-up wake | ✅ Done |
-| 8. Distribution to family (TestFlight), family invites, auto-renewing builds | ✅ Done |
-| 9. Ingredients → shopping list, tonight's dinner on the dashboard | ✅ Done |
+In daily use on our kitchen iPad, with the family on TestFlight. What changed in each build is in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
